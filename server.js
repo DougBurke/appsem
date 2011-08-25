@@ -642,9 +642,12 @@ function doPublications(req, res, next){
     console.log("=====================In do Publications", req.url, req.headers.referer, req.originalUrl);
     var camefrom=url.parse(req.url, true).query.camefrom;
     console.log("I CAME FROM:",camefrom)
+    var loggedin = req.cookies['logincookie'] !== undefined;
     var view={
         pagehead:{pagetype:'Publications', siteprefix: SITEPREFIX, staticprefix: SITEPREFIX+STATICPREFIX},
-        bodyhead:{isitchosenpublications:'chosen', current_url:req.url, siteprefix: SITEPREFIX, staticprefix: SITEPREFIX+STATICPREFIX},
+        bodyhead:{isitchosenpublications:'chosen', current_url:req.url, 
+		  'userloggedin': loggedin,
+		  siteprefix: SITEPREFIX, staticprefix: SITEPREFIX+STATICPREFIX},
         bodybody:{bodyright:{siteprefix: SITEPREFIX, staticprefix: SITEPREFIX+STATICPREFIX}},
     };
     var lpartials=JSON.parse(globpartialsjson);
@@ -720,16 +723,19 @@ function timeToText(nowDate, timeString) {
 function doSaved(req, res, next){
     console.log("In do Saved");
     var logincookie=req.cookies['logincookie'];
+    var loggedin = logincookie !== undefined;
     var view={
         pagehead:{pagetype:'Saved', siteprefix: SITEPREFIX, staticprefix: SITEPREFIX+STATICPREFIX},
-        bodyhead:{isitchosensaved:'chosen', current_url:req.url, siteprefix: SITEPREFIX, staticprefix: SITEPREFIX+STATICPREFIX},
+        bodyhead:{isitchosensaved:'chosen', current_url:req.url, 
+		  'userloggedin': loggedin,
+		  siteprefix: SITEPREFIX, staticprefix: SITEPREFIX+STATICPREFIX},
         bodybody:{siteprefix: SITEPREFIX, staticprefix: SITEPREFIX+STATICPREFIX, hello: 'World'},
     };
     var lpartials=JSON.parse(globpartialsjson);
     lpartials['bodybody']=bodybodysaved;
     var html;
     res.writeHead(200, { 'Content-Type': 'text/html; charset=UTF-8' });
-    if (logincookie!==undefined){
+    if (loggedin){
 	// var nowDate = Date().now;
 	var nowDate = new Date().getTime();
 	redis_client.get('email:'+logincookie,function(err, email){

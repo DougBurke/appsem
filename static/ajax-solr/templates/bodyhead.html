@@ -17,8 +17,10 @@
                 <span class="tab {{isitchosenobjects}}"><a href="{{ siteprefix }}/explorer/objects">Objects</a></span>
                 <span class="tab {{isitchosendatasets}}"><a href="{{ siteprefix }}/explorer/datasets">Datasets</a></span>
                 <span class="tab {{isithosenproposals}}"><a href="{{ siteprefix }}/explorer/proposals">Proposals</a></span>
-				<span class="tab saved {{isitchosensaved}}"><a href="{{ siteprefix }}/explorer/saved">Saved</a></span>
-            </div>
+  {{#userloggedin}}
+	      <span class="tab saved {{isitchosensaved}}"><a href="{{ siteprefix }}/explorer/saved">Saved</a></span>
+  {{/userloggedin}}
+	    </div>
   		<!--h2>With RDF, Faceting, Objects, Data, and SOLR, Oh My!</h2--> 
             </td><td valign="top" align="left">
 
