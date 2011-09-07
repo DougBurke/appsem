@@ -46,20 +46,7 @@
 	splitConstraint: function (constraint) {
 	    var i = constraint.indexOf(':'); // assume always succeeds
 	    var field = constraint.substr(0, i);
-	    var label = constraint.substr(i+1);
-
-	    var l = label.length;
-	    var firstChar = label[0];
-	    var lastChar = label[l-1];
-
-	    if (firstChar == '"' && lastChar == '"') {
-		label = label.substr(1, l-2);
-	    } else if (firstChar == '[' && lastChar == ']') {
-		var idx = label.indexOf(' TO ');
-		if (idx !== -1) {
-		    label = label.substr(1, l-2);
-		}
-	    }
+	    var label = cleanFacetValue(constraint.substr(i+1));
 
 	    return { constraint: constraint,
 		     field: field,
