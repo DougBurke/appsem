@@ -2,91 +2,60 @@
  * Code for the saved page
  */
 
-/**
- * Make a POST request to the ADS servers using the given
- * URL path and apply the given callback to the response.
- */
-var doADSproxy; // ugly polution of the global namespace
-
-/**
- * Change all the buttons in the form to the given state.
- */
-var changeAllButtons;
-
-/**
- * Set up the 'Submit a delete' action for the table.
- */
-var submitDeleteAction;
-
-/**
- * Check the saved-publication table to find all checked items
- * and export them to BibTex using the ADS server.
- */
-var getAsBibTex;
-
-/**
- * Get the BibTex entries for all the publications in the saved
- * search.
- *
- * At present we restrict to one search.
- */
-var getSearchAsBibTex;
-
-/**
- * Save all the publications in the saved search to a myADS library.
- *
- * At present we restrict to one search.
- */ 
-var saveSearchToMyADS;
-
-/**
- * Save all the publications to a myADS library.
- */
-var saveToMyADS;
-
-/**
- * Ensure the given table is ready for user sorting.
- */
-var setupSortedTable;
-
 // var fancyboxOpts = { 'autoDimensions': false, 'width': 1024, 'height': 768 };
 
 (function ($) {
 
-    changeAllButtons = function (form, newstate) {
-	$(form).find('input[type=checkbox]').each(function() { this.checked = newstate; });
-    };
-
-    doADSproxy = function (urlpath, callback) {
+    /**
+     * Make a POST request to the ADS servers using the given
+     * URL path and apply the given callback to the response.
+     */
+    function doADSproxy(urlpath, callback) {
 	$.post(SITEPREFIX + '/adsproxy',
 	       JSON.stringify({urlpath: urlpath}),
 	       callback);
     };
 
-    submitDeleteAction = function (path, idname) {
+    /**
+     * Set up the 'Submit a delete' action for the table.
+     */
+    function submitDeleteAction(path, idname) {
 	return function () {
 	    var data = [];
 	    $(this).find('input[type=checkbox][checked|=true]').each(function() {
 		data.push(this.value);
 	    });
-	    if (data.length == 0) { return false; }
+	    if (data.length == 0) { 
+		alert("No items have been selected.");
+		return false; 
+	    }
 	    var map = { action: "delete" };
 	    map[idname] = data;
 	    $.post(SITEPREFIX+path, JSON.stringify(map), function (resp) {
-		// reload on success or error
+		// reload page on success or error; perhaps should just
+		// re-create the given element
 		window.location.reload();
 	    });
 	};
     };
 
-    getAsBibTex = function (form) {
+    /**
+     * Check the saved-publication table to find all checked items
+     * and export them to BibTex using the ADS server.
+     */
+    function getAsBibTex() {
+	var form = this.form;
 	var data = [];
 	// could use input:checked but I think I read that there may
 	// be issues, so use the more explicit version.
-	$(form).find('input[type=checkbox][checked|=true]').parent().nextAll('td.bibcode').each(function() {
+	//
+	$(form).find('input[type=checkbox][checked|=true]').parent().nextAll('td').find('span.bibcode').each(function() {
 	    data.push($(this).text());
 	});
-	if (data.length == 0) { return false; }
+	if (data.length == 0) { 
+	    alert("No items have been selected.");
+	    return false;
+	}
 	$.fancybox.showActivity();
 	doADSproxy('/cgi-bin/nph-bib_query?data_type=BIBTEX&' +
 		   data.map(encodeURIComponent).join('&'),
@@ -94,13 +63,22 @@ var setupSortedTable;
 	return false;
     };
 
-    getSearchAsBibTex = function (form) {
+    /**
+     * Get the BibTex entries for all the publications in the saved
+     * search.
+     *
+     * At present we restrict to one search.
+     */
+    function getSearchAsBibTex() {
+	var form = this.form;
 	var data = [];
 	$(form).find('input[type=checkbox][checked|=true]').each(function() {
 	    data.push(this.value);
 	});
-	if (data.length == 0) { return false; }
-	else if (data.length > 1) {
+	if (data.length == 0) { 
+	    alert("No items have been selected.");
+	    return false; 
+	} else if (data.length > 1) {
 	    alert("Only 1 search can be retrieved as BibTex at a time (you selected " + data.length + ")");
 	    return false;
 	}
@@ -126,12 +104,19 @@ var setupSortedTable;
 	});
     };
 
-    saveToMyADS = function (form) {
+    /**
+     * Save all the selected publications to a myADS library.
+     */
+    function saveToMyADS() {
+	var form = this.form;
 	var data = [];
-	$(form).find('input[type=checkbox][checked|=true]').parent().nextAll('td.bibcode').each(function() {
+	$(form).find('input[type=checkbox][checked|=true]').parent().nextAll('td').find('span.bibcode').each(function() {
 	    data.push($(this).text());
 	});
-	if (data.length == 0) { return false; }
+	if (data.length == 0) { 
+	    alert("No items have been selected.");
+	    return false;
+	}
 	$.fancybox.showActivity();
 	doADSproxy('/cgi-bin/nph-abs_connect?library=Add&' +
 		   data.map(function (item) { return 'bibcode=' +
@@ -139,14 +124,22 @@ var setupSortedTable;
 		   function(resp) { $.fancybox(resp); return false; });  
     };
    
-    saveSearchToMyADS = function (form) {
+    /**
+     * Save all the publications in the saved search to a myADS library.
+     *
+     * At present we restrict to one search.
+     */ 
+    function saveSearchToMyADS() {
+	var form = this.form;
 	var data = [];
 	$(form).find('input[type=checkbox][checked|=true]').each(function() {
 	    data.push(this.value);
 	});
-	if (data.length == 0) { return false; }
-	else if (data.length > 1) {
-	    alert("Only 1 search can be retrieved as BibTex at a time (you selected " + data.length + ")");
+	if (data.length == 0) { 
+	    alert("No items have been selected.");
+	    return false;
+	} else if (data.length > 1) {
+	    alert("Only 1 search can be saved to myADS at a time (you selected " + data.length + ")");
 	    return false;
 	}
 	$.fancybox.showActivity();
@@ -187,8 +180,141 @@ var setupSortedTable;
 	}
     };
     
-    setupSortedTable = function (table) {
-	$(table).tablesorter(tsortopts);
-    };
+    /**
+     * Create the saved searches table where searches is an array
+     * of objects with fields:
+     *   searchuri:      "fq=missions_s%3AMAST%2Feuve&q=*%3A*",
+     *   searchtext:     "missions_s=MAST/euve "
+     *   searchtime:     1314367771876
+     *   searchtimestr:  "Fri, 26 Aug 2011 14:09:31 GMT"
+     *   searchctr:      0
+     */
+    function createSavedSearches(searches) {
+	var nsearch = searches.length;
+
+	var rows = [];
+	for (var i = 0; i < nsearch; i++) {
+	    var s = searches[i];
+	    rows.push([
+		$('<input type="checkbox" name="searchid"/>')
+		    .attr('value', s.searchuri),
+		$('<span/>')
+		    .attr('value', s.searchtime)
+		    .text(s.searchtimestr),
+		$('<a/>')
+		    .attr('href', SITEPREFIX + '/explorer/publications#' + s.searchuri)
+		    .text(s.searchtext)
+	    ]);
+	}
+
+	var $div = $('div#saved-searches');
+	$div.append(AjaxSolr.theme('saved_title', 'Saved searches'));
+	$div.append(AjaxSolr.theme('saved_items', 'searches', 
+				   ['Date saved', 'Search terms'],
+				   rows,
+				   getSearchAsBibTex,
+				   saveSearchToMyADS
+				  ));
+
+	$('#saved-searches-form').submit(submitDeleteAction('/deletesearches', 'searchid'));
+	$('#saved-searches-table').tablesorter(tsortopts);
+    }
+
+    /**
+     * Create the saved publications table where pubs is an array
+     * of objects with fields:
+     *   pubid:       "f779d03a-4865-4b45-80fc-344d51388ea5"
+     *   pubtime:     1314367771876
+     *   pubtimestr:  "Fri, 26 Aug 2011 14:09:31 GMT"
+     *   linkuri:     "bibcode%3A2004ApJ...606.1174B"
+     *   linktext:    "The O VI and C III Lines at 1032 and 977 Å in Hyades F Stars"
+     *   bibcode:     "2004ApJ...606.1174B"
+     *   pubctr:      22
+     */
+    function createSavedPublications(pubs) {
+
+	var npub = pubs.length;
+
+	var rows = [];
+	for (var i = 0; i < npub; i++) {
+	    var p = pubs[i];
+	    rows.push([
+		$('<input type="checkbox" name="pubid"/>')
+		    .attr('value', p.pubid),
+		$('<span/>')
+		    .attr('value', p.pubtime)
+		    .text(p.pubtimestr),
+		$('<a/>')
+		    .attr('href', SITEPREFIX + '/explorer/publications#fq=' + p.linkuri + '&q=*%3A*')
+		    .text(p.linktext),
+		$('<span class="bibcode">').text(p.bibcode)
+	    ]);
+	}
+
+	var $div = $('div#saved-pubs');
+	$div.append(AjaxSolr.theme('saved_title', 'Saved Publications'));
+	$div.append(AjaxSolr.theme('saved_items', 'pubs', 
+				   ['Date saved', 'Title', 'Bibcode'],
+				   rows,
+				   getAsBibTex,
+				   saveToMyADS
+				  ));
+
+	$('#saved-pubs-form').submit(submitDeleteAction('/deletepubs', 'pubid'));
+	$('#saved-pubs-table').tablesorter(tsortopts);
+    }
+
+    /**
+     * The user has no saved searches.
+     */
+    function noSavedSearches() {
+	var $div = $('div#saved-searches');
+	$div.append(AjaxSolr.theme('saved_title', 'No saved searches'));
+    }
+    
+    /**
+     * The user has no saved publications.
+     */
+    function noSavedPublications() {
+	var $div = $('div#saved-searches');
+	$div.append(AjaxSolr.theme('saved_title', 'No saved publications'));
+    }
+    
+    // When a user logs in we need to create the saved search and publication
+    // tables.
+    //
+    // TODO: synchronization on the showing of the tables?
+    //
+    mediator.subscribe('user/login', function (email) {
+
+        $.getJSON(SITEPREFIX + '/savedsearches2', function (data) {
+	    var searches = data.savedsearches;
+	    if (searches.hassearches) {
+		createSavedSearches(searches.savedsearches);
+	    } else {
+		noSavedSearches();
+	    }
+        });
+
+        $.getJSON(SITEPREFIX + '/savedpubs2', function (data) {
+	    var pubs = data.savedpubs;
+	    if (pubs.haspubs) {
+		createSavedPublications(pubs.savedpubs);
+	    } else {
+		noSavedPublications();
+	    }
+        });
+
+    });
+
+    /***
+	do not need to hide/display things since this is handled by
+	the generic userloggedin/out classes, although we may decide that
+	that is not a good idea in the long term.
+
+    mediator.subscribe('user/logout', function () {
+        alert("SAVE: User logout/no user.");
+    });
+    ***/
     
 })(jQuery);
