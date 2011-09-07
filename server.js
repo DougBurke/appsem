@@ -783,31 +783,6 @@ function doObservations(req, res, next) {
 }
 
 /*
- * Given a saved search, which looks something like
- * "fq=keywords_s%3A%22stars%20luminosity%20function%3Bmass%20function%22&fq=author_s%3A%22Stahl%2C%20O%22&fq=instruments_s%3AMAST%2FIUE%2FLWR&q=*%3A*"
- * return a (hopefully) human-readable version.
- */
-function searchToText(searchTerm) {
-    // lazy way to remove the trailing search term
-    var s = "&" + searchTerm;
-    s = s.replace('&q=*%3A*', '');
-
-    // only decode after the initial split to protect against the
-    // unlikely event that &fq= appears as part of a search term.
-    var terms = s.split(/&fq=/);
-
-    // ignore the first entry as '' by construction
-    var out = "";
-    var i;
-    for (i = 1; i < terms.length; i++) {
-	var toks = decodeURIComponent(terms[i]).split(':', 2);
-	out += toks[0] + "=" + toks[1] + " ";
-    }
-
-    return out;
-}
-
-/*
  * Returns a string representation of timeString, which
  * should be a string containing the time in milliseconds,
  * nowDate is the "current" date in milliseconds.
@@ -867,7 +842,6 @@ function createSavedSearchTemplates(view, nowDate, searchkeys, searchtimes) {
 	skey = searchkeys[i];
 	stime = searchtimes[i];
 	view.savedsearches[i] = { 'searchuri': skey,
-				  'searchtext': searchToText(skey),
 				  'searchtime': stime,
 				  'searchtimestr': timeToText(nowDate, stime),
 				  'searchctr': i };
