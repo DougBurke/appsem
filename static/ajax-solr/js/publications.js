@@ -67,6 +67,7 @@ var Manager;
 		}
 		
 		//this gets called all the time. How to avoid this?
+		// TODO: do not need to call this when not logged in
 		$.getJSON(SITEPREFIX+'/savedsearches', function(data){
 		    var thissearchurl=location.href.split("#")[1];
 		    console.log("THISSEARCHURL", thissearchurl);
