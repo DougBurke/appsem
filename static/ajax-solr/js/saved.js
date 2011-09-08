@@ -17,9 +17,12 @@
     };
 
     /**
-     * Set up the 'Submit a delete' action for the table.
+     * Set up the 'Submit a delete' action for the table,
+     * where recreate is the function to call to recreate the
+     * section containing the table (including support for
+     * displaying 'no saved ...').
      */
-    function submitDeleteAction(path, idname) {
+    function submitDeleteAction(path, idname, recreate) {
 	return function () {
 	    var data = [];
 	    $(this).find('input[type=checkbox][checked|=true]').each(function() {
@@ -34,8 +37,11 @@
 	    $.post(SITEPREFIX+path, JSON.stringify(map), function (resp) {
 		// reload page on success or error; perhaps should just
 		// re-create the given element
-		window.location.reload();
+		//window.location.reload();
+		recreate();
+		return false;
 	    });
+	    return false;
 	};
     };
 
@@ -147,6 +153,42 @@
 	    }
 	}
     };
+
+    /**
+     * Get the list of saved searches (if any) and create the
+     * appropriate elements in the page.
+     */
+    function createSavedSearches() {
+
+	$('div#saved-searches').empty();
+        $.getJSON(SITEPREFIX + '/savedsearches2', function (data) {
+	    var searches = data.savedsearches;
+	    if (searches.hassearches) {
+		createSavedSearchesSection(searches.savedsearches);
+	    } else {
+		noSavedSearches();
+	    }
+        });
+
+    }
+    
+    /**
+     * Get the list of saved publications (if any) and create the
+     * appropriate elements in the page.
+     */
+    function createSavedPublications() {
+
+	$('div#saved-pubs').empty();
+        $.getJSON(SITEPREFIX + '/savedpubs2', function (data) {
+	    var pubs = data.savedpubs;
+	    if (pubs.haspubs) {
+		createSavedPublicationsSection(pubs.savedpubs);
+	    } else {
+		noSavedPublications();
+	    }
+        });
+
+    }
     
     /**
      * Create the saved searches table where searches is an array
@@ -156,7 +198,7 @@
      *   searchtimestr:  "Fri, 26 Aug 2011 14:09:31 GMT"
      *   searchctr:      0
      */
-    function createSavedSearches(searches) {
+    function createSavedSearchesSection(searches) {
 	var nsearch = searches.length;
 
 	var rows = [];
@@ -191,7 +233,7 @@
 				   handleSearches(saveToMyADS)
 				  ));
 
-	$('#saved-searches-form').submit(submitDeleteAction('/deletesearches', 'searchid'));
+	$('#saved-searches-form').submit(submitDeleteAction('/deletesearches', 'searchid', createSavedSearches));
 	$('#saved-searches-table').tablesorter(tsortopts);
     }
 
@@ -206,7 +248,7 @@
      *   bibcode:     "2004ApJ...606.1174B"
      *   pubctr:      22
      */
-    function createSavedPublications(pubs) {
+    function createSavedPublicationsSection(pubs) {
 
 	var npub = pubs.length;
 
@@ -235,7 +277,7 @@
 				   handlePublications(saveToMyADS)
 				  ));
 
-	$('#saved-pubs-form').submit(submitDeleteAction('/deletepubs', 'pubid'));
+	$('#saved-pubs-form').submit(submitDeleteAction('/deletepubs', 'pubid', createSavedPublications));
 	$('#saved-pubs-table').tablesorter(tsortopts);
     }
 
@@ -261,25 +303,8 @@
     // TODO: synchronization on the showing of the tables?
     //
     mediator.subscribe('user/login', function (email) {
-
-        $.getJSON(SITEPREFIX + '/savedsearches2', function (data) {
-	    var searches = data.savedsearches;
-	    if (searches.hassearches) {
-		createSavedSearches(searches.savedsearches);
-	    } else {
-		noSavedSearches();
-	    }
-        });
-
-        $.getJSON(SITEPREFIX + '/savedpubs2', function (data) {
-	    var pubs = data.savedpubs;
-	    if (pubs.haspubs) {
-		createSavedPublications(pubs.savedpubs);
-	    } else {
-		noSavedPublications();
-	    }
-        });
-
+	createSavedSearches();
+	createSavedPublications();
     });
 
     /***
