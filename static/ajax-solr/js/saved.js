@@ -40,146 +40,98 @@
     };
 
     /**
-     * Check the saved-publication table to find all checked items
-     * and export them to BibTex using the ADS server.
+     * Given an array of bibcodes, get the BibTex entries from ADS
+     * and display to the user.
      */
-    function getAsBibTex() {
-	var form = this.form;
-	var data = [];
-	// could use input:checked but I think I read that there may
-	// be issues, so use the more explicit version.
-	//
-	$(form).find('input[type=checkbox][checked|=true]').parent().nextAll('td').find('span.bibcode').each(function() {
-	    data.push($(this).text());
-	});
-	if (data.length == 0) { 
-	    alert("No items have been selected.");
-	    return false;
-	}
-	$.fancybox.showActivity();
+    function getBibTexFromADS(bibcodes) {
+	// alert("bibcodes:\n" + bibcodes.join('\n')); $.fancybox.hideActivity(); return false;
+
+	// Note: we wrap up the plain text returned by ADS since it has a content type of
+	//       text/html; what would happen if we changed the content type in resp instead?
 	doADSproxy('/cgi-bin/nph-bib_query?data_type=BIBTEX&' +
-		   data.map(encodeURIComponent).join('&'),
-		   function (resp) { $.fancybox('<pre>'+resp+'</pre>'); });
-	return false;
-    };
+		   bibcodes.map(encodeURIComponent).join('&'),
+		   function (resp) { $.fancybox('<pre>'+resp+'</pre>'); return false; });
+    }
 
     /**
-     * Get the BibTex entries for all the publications in the saved
-     * search.
-     *
-     * At present we restrict to one search.
+     * Given an array of bibcodes, send to myADS for saving in a library.
      */
-    function getSearchAsBibTex() {
-	var form = this.form;
-	var data = [];
-	$(form).find('input[type=checkbox][checked|=true]').each(function() {
-	    data.push(this.value);
-	});
-	if (data.length == 0) { 
-	    alert("No items have been selected.");
-	    return false; 
-	} else if (data.length > 1) {
-	    alert("Only 1 search can be retrieved as BibTex at a time (you selected " + data.length + ")");
-	    return false;
-	}
-	$.fancybox.showActivity();
-
-	// TODO: We limit the search for now; really should page through the results.
-	var nrows = 100;
-	var query = SOLRURL + 'select?' + data[0] +
-            '&fl=bibcode' + '&rows=' + nrows +
-            '&wt=json&json.wrf=?';
-
-	$.getJSON(query, function (response) {
-	    var resp = response.response;
-	    if (resp.numFound === 0) {
-		$.fancybox.hideActivity();
-		alert("No publications found for this search.");
-		return false;
-	    }
-
-	    if (resp.numFound > nrows) {
-		alert("Warning: results restricted to the first " + nrows + " of " + resp.numFound);
-	    }
-
-	    var bibcodes = [];
-	    for (var i = 0, n = resp.docs.length; i < n; i++) {
-		bibcodes.push(resp.docs[i].bibcode);
-	    }
-	    doADSproxy('/cgi-bin/nph-bib_query?data_type=BIBTEX&' +
-		       bibcodes.map(encodeURIComponent).join('&'),
-		       function (resp) { $.fancybox('<pre>'+resp+'</pre>'); return false; });
-	});
-    };
-
-    /**
-     * Save all the selected publications to a myADS library.
-     */
-    function saveToMyADS() {
-	var form = this.form;
-	var data = [];
-	$(form).find('input[type=checkbox][checked|=true]').parent().nextAll('td').find('span.bibcode').each(function() {
-	    data.push($(this).text());
-	});
-	if (data.length == 0) { 
-	    alert("No items have been selected.");
-	    return false;
-	}
-	$.fancybox.showActivity();
+    function saveToMyADS(bibcodes) {
+	// alert("bibcodes:\n" + bibcodes.join('\n')); $.fancybox.hideActivity(); return false;
 	doADSproxy('/cgi-bin/nph-abs_connect?library=Add&' +
-		   data.map(function (item) { return 'bibcode=' +
-					      encodeURIComponent(item); }).join('&'),
+		   bibcodes.map(function (item) { return 'bibcode=' +
+						  encodeURIComponent(item); }).join('&'),
 		   function(resp) { $.fancybox(resp); return false; });  
-    };
-   
-    /**
-     * Save all the publications in the saved search to a myADS library.
-     *
-     * At present we restrict to one search.
-     */ 
-    function saveSearchToMyADS() {
-	var form = this.form;
-	var data = [];
-	$(form).find('input[type=checkbox][checked|=true]').each(function() {
-	    data.push(this.value);
-	});
-	if (data.length == 0) { 
-	    alert("No items have been selected.");
-	    return false;
-	} else if (data.length > 1) {
-	    alert("Only 1 search can be saved to myADS at a time (you selected " + data.length + ")");
-	    return false;
-	}
-	$.fancybox.showActivity();
+    }
 
-	// TODO: We limit the search for now; really should page through the results.
-	var nrows = 100;
-	var query = SOLRURL + 'select?' + data[0] +
-            '&fl=bibcode' + '&rows=' + nrows +
-            '&wt=json&json.wrf=?';
-	
-	$.getJSON(query, function (response) {
-	    var resp = response.response;
-	    if (resp.numFound === 0) {
-		$.fancybox.hideActivity();
-		alert("No publications found for this search.");
+    /**
+     * Handle a request for the publication table by getting the
+     * bibcodes of all selected items and passing them to the handler.
+     */
+    function handlePublications(handler) {
+	return function () {
+	    var form = this.form;
+	    var data = [];
+	    $(form).find('input[type=checkbox][checked|=true]').parent().nextAll('td').find('span.bibcode').each(function() {
+		data.push($(this).text());
+	    });
+	    if (data.length == 0) { 
+		alert("No items have been selected.");
 		return false;
 	    }
+	    $.fancybox.showActivity();
+	    handler(data);
+	};
+    }
 
-	    if (resp.numFound > nrows) {
-		alert("Warning: results restricted to the first " + nrows + " of " + resp.numFound);
+    /**
+     * Handle a request for the search table by getting the
+     * bibcodes of all selected items and passing them to the handler.
+     *
+     * At present we restrict to a single search.
+     */
+    function handleSearches(handler) {
+	return function () {
+	    var form = this.form;
+	    var data = [];
+	    $(form).find('input[type=checkbox][checked|=true]').each(function() {
+		data.push(this.value);
+	    });
+	    if (data.length == 0) { 
+		alert("No items have been selected.");
+		return false; 
+	    } else if (data.length > 1) {
+		alert("Only 1 search can be retrieved at a time (you selected " + data.length + ")");
+		return false;
 	    }
-
-	    var bibcodes = [];
-	    for (var i = 0, n = resp.docs.length; i < n; i++) {
-		bibcodes.push(resp.docs[i].bibcode);
-	    }
-	    var bibcodelist = bibcodes.map(function (item) { return 'bibcode=' +
-							     encodeURIComponent(item); });
-	    doADSproxy('/cgi-bin/nph-abs_connect?library=Add&' + bibcodelist.join('&'),
-		       function(resp) { $.fancybox(resp); return false; });
-	});
-    };
+	    $.fancybox.showActivity();
+	    
+	    // TODO: We limit the search for now; really should page through the results.
+	    var nrows = 100;
+	    var query = SOLRURL + 'select?' + data[0] +
+		'&fl=bibcode' + '&rows=' + nrows +
+		'&wt=json&json.wrf=?';
+	    
+	    $.getJSON(query, function (response) {
+		var resp = response.response;
+		if (resp.numFound === 0) {
+		    $.fancybox.hideActivity();
+		    alert("No publications found for this search.");
+		    return false;
+		}
+		
+		if (resp.numFound > nrows) {
+		    alert("Warning: results restricted to the first " + nrows + " of " + resp.numFound);
+		}
+		
+		var bibcodes = [];
+		for (var i = 0, n = resp.docs.length; i < n; i++) {
+		    bibcodes.push(resp.docs[i].bibcode);
+		}
+		handler(bibcodes);
+	    });
+	};
+    }
 
     // Use the actual time value to sort the time column rather than
     // the text, and the text for the other columns. a bit ugly
@@ -235,8 +187,8 @@
 	$div.append(AjaxSolr.theme('saved_items', 'searches', 
 				   ['Date saved', 'Search terms'],
 				   rows,
-				   getSearchAsBibTex,
-				   saveSearchToMyADS
+				   handleSearches(getBibTexFromADS),
+				   handleSearches(saveToMyADS)
 				  ));
 
 	$('#saved-searches-form').submit(submitDeleteAction('/deletesearches', 'searchid'));
@@ -279,8 +231,8 @@
 	$div.append(AjaxSolr.theme('saved_items', 'pubs', 
 				   ['Date saved', 'Title', 'Bibcode'],
 				   rows,
-				   getAsBibTex,
-				   saveToMyADS
+				   handlePublications(getBibTexFromADS),
+				   handlePublications(saveToMyADS)
 				  ));
 
 	$('#saved-pubs-form').submit(submitDeleteAction('/deletepubs', 'pubid'));
