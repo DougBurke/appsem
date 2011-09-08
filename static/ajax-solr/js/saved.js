@@ -84,19 +84,27 @@
 	}
 	$.fancybox.showActivity();
 
+	// TODO: We limit the search for now; really should page through the results.
+	var nrows = 100;
 	var query = SOLRURL + 'select?' + data[0] +
-            '&fl=bibcode' +
+            '&fl=bibcode' + '&rows=' + nrows +
             '&wt=json&json.wrf=?';
 
 	$.getJSON(query, function (response) {
-	    if (response.response.numFound === 0) {
+	    var resp = response.response;
+	    if (resp.numFound === 0) {
 		$.fancybox.hideActivity();
 		alert("No publications found for this search.");
 		return false;
 	    }
+
+	    if (resp.numFound > nrows) {
+		alert("Warning: results restricted to the first " + nrows + " of " + resp.numFound);
+	    }
+
 	    var bibcodes = [];
-	    for (var i = 0, n = response.response.docs.length; i < n; i++) {
-		bibcodes.push(response.response.docs[i].bibcode);
+	    for (var i = 0, n = resp.docs.length; i < n; i++) {
+		bibcodes.push(resp.docs[i].bibcode);
 	    }
 	    doADSproxy('/cgi-bin/nph-bib_query?data_type=BIBTEX&' +
 		       bibcodes.map(encodeURIComponent).join('&'),
@@ -144,19 +152,27 @@
 	}
 	$.fancybox.showActivity();
 
+	// TODO: We limit the search for now; really should page through the results.
+	var nrows = 100;
 	var query = SOLRURL + 'select?' + data[0] +
-            '&fl=bibcode' +
+            '&fl=bibcode' + '&rows=' + nrows +
             '&wt=json&json.wrf=?';
 	
 	$.getJSON(query, function (response) {
-	    if (response.response.numFound === 0) {
+	    var resp = response.response;
+	    if (resp.numFound === 0) {
 		$.fancybox.hideActivity();
 		alert("No publications found for this search.");
 		return false;
 	    }
+
+	    if (resp.numFound > nrows) {
+		alert("Warning: results restricted to the first " + nrows + " of " + resp.numFound);
+	    }
+
 	    var bibcodes = [];
-	    for (var i = 0, n = response.response.docs.length; i < n; i++) {
-		bibcodes.push(response.response.docs[i].bibcode);
+	    for (var i = 0, n = resp.docs.length; i < n; i++) {
+		bibcodes.push(resp.docs[i].bibcode);
 	    }
 	    var bibcodelist = bibcodes.map(function (item) { return 'bibcode=' +
 							     encodeURIComponent(item); });
