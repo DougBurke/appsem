@@ -194,15 +194,23 @@
 	var rows = [];
 	for (var i = 0; i < nsearch; i++) {
 	    var s = searches[i];
+	    var scpts = searchToText(s.searchuri, fieldname_map);
+	    var $search = $('<a/>').attr('href', SITEPREFIX + '/explorer/publications#' + s.searchuri);
+	    for (var j = 0, ns = scpts.length; j < ns; j++) {
+		$search.append($('<div/>').text(scpts[j]));
+	    }
 	    rows.push([
 		$('<input type="checkbox" name="searchid"/>')
 		    .attr('value', s.searchuri),
 		$('<span/>')
 		    .attr('value', s.searchtime)
 		    .text(s.searchtimestr),
+		$search // not sure I like this version
+		/***
 		$('<a/>')
 		    .attr('href', SITEPREFIX + '/explorer/publications#' + s.searchuri)
-		    .text(searchToText(s.searchuri))
+		    .text(scpts.join('\n'))
+		    ***/
 	    ]);
 	}
 

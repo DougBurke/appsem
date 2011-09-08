@@ -50,7 +50,7 @@
 
 	    return { constraint: constraint,
 		     field: field,
-		     display: this.fieldmap[field] || field,
+		     display: cleanFacetName(field, this.fieldmap),
 		     label: label
 		   };
 	},

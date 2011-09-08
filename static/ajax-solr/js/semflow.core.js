@@ -53,14 +53,20 @@ var mediator = (function(){
 }());
 
 /**
- * Given a facet name, return a human-readable version if available.
+ * Given a facet name, return a human-readable version using the supplied
+ * namemap; if there is no mapping for this field, or the namemap
+ * is not suppleid then the input name is returned.
  *
- * At present this is a no-op as we need access to the same field-mapping
- * information as in publications.js/observations.js
+ * It may be better to make some form of mapping object
+ * or hide the map within this routine, so you only end up
+ * sending the routine around.
  */
-function cleanFacetName(name) {
-    // needs the field mapping
-    return name;
+function cleanFacetName(name, namemap) {
+    if (namemap === undefined) {
+	return name;
+    } else {
+	return namemap[name] || name;
+    }
 }
 
 /**
@@ -96,7 +102,7 @@ function cleanFacetValue(label) {
 /**
  * Given a saved search, which looks something like
  * "fq=keywords_s%3A%22stars%20luminosity%20function%3Bmass%20function%22&fq=author_s%3A%22Stahl%2C%20O%22&fq=instruments_s%3AMAST%2FIUE%2FLWR&q=*%3A*"
- * return a (hopefully) human-readable version.
+ * return a (hopefully) human-readable version as an array of strings.
  *
  * We split up into name,value pairs for each constriant,
  * then replace decoded characters in the value, and then
@@ -104,8 +110,11 @@ function cleanFacetValue(label) {
  *     name is human readable
  *     Solr-specific punctation in the value is removed
  * and combine constraints from the same field/name.
+ *
+ * namemap is the name mapping needed by cleanFacetName;
+ * it can be undefined.
  */
-function searchToText(searchTerm) {
+function searchToText(searchTerm, namemap) {
     // lazy way to remove the trailing search term
     var s = "&" + searchTerm;
     s = s.replace('&q=*%3A*', '');
@@ -128,13 +137,45 @@ function searchToText(searchTerm) {
 	}
     }
     
-    var outstr = [];
+    var outs = [];
     for (var name in out) {
-	outstr.push(cleanFacetName(name) + "=" + out[name].join(','));
+	outs.push(cleanFacetName(name, namemap) + "=" + out[name].join(','));
     }
-    return outstr.join(' ');
+    return outs;
 }
 
+/**
+ * Mapping between field name as used by Solr and the text we
+ * use to display to the user.
+ *
+ * Uses include cleanFacetName() and CurrentSearchWidget().
+ */
+var fieldname_map = {
+    'keywords_s': 'Keyword',
+    'author_s': 'Author',
+    'objecttypes_s': 'Object Type',
+    'objectnames_s': 'Object Name',
+    'obsvtypes_s': 'Observation Type',
+    'obsids_s': 'Observation ID',
+    'instruments_s': 'Instrument',
+    'obsv_mission_s': 'Mission',
+    'missions_s': 'Mission', // is missions_s still valid?
+    'emdomains_s': 'Wavelength',
+    'targets_s': 'Target Name',
+    'datatypes_s': 'Data Type',
+    'propids_s': 'Proposal ID',
+    'proposaltype_s': 'Proposal Type',
+    'proposalpi_s': 'Proposal PI',
+    'pubyear_i': 'Publication Year',
+    'ra_f': 'RA',
+    'dec_f': 'Dec',
+    'fov_f': 'Field of View',
+    'obsvtime_d': 'Observation Date',
+    'exptime_f': 'Exposure Time',
+    'data_collection_s': 'Data Collection',
+    'resolution_f': 'Spatial resolution',
+    't_resolution_f': 'Temporal resolution'
+};
 
 (function ($) {
     $(function () {
