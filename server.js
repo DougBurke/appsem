@@ -17,6 +17,8 @@ var requests = require("./requests");
 var completeRequest = requests.completeRequest;
 var failedRequest = requests.failedRequest;
 var successfulRequest = requests.successfulRequest;
+var ifLoggedIn = requests.ifLoggedIn;
+var postHandler = requests.postHandler;
 
 var proxy = require("./proxy");
 var doProxy = proxy.doProxy;
@@ -52,21 +54,6 @@ var isArray = function (o) {
 };
 
 
-function postHandler(req, res, tcallback) {
-    if (req.method === 'POST') {
-        var completebuffer = '';
-        req.addListener('data', function (chunk) {
-            //console.log("proxyrequest.write");
-            completebuffer += chunk;
-        });
-        req.addListener('end', function () {
-            //console.log("proxyrequest.end");
-            tcallback(completebuffer, req, res);//this can be sync or async
-            //res.writeHead(200, proxy_response.headers);
-        });
-    }
-}
-
 var solrrouter = connect(
     connect.router(function (app) {
 	app.get('/select', function (req, res) {
@@ -80,24 +67,6 @@ var solrrouter = connect(
     })
 );
 
-
-/*
- * Call cb with the login cookie otherwise return
- * a failed request with failopts (defaults to {} if
- * not given).
- */
-function ifLoggedIn(req, res, cb, failopts) {
-    var logincookie = req.cookies.logincookie;
-    if (logincookie === undefined) {
-	if (failopts === undefined) {
-	    failedRequest(res);
-	} else {
-	    failedRequest(res, failopts);
-	}
-    } else {
-	cb(logincookie);
-    }
-}
 
 // A comment on saved times, used in both savePub and saveSearch.
 //
