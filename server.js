@@ -28,10 +28,13 @@ var RedisStore = require('connect-redis')(connect);
 //var uuid = require('node-uuid');
 
 var requests = require("./requests");
-
 var completeRequest = requests.completeRequest;
 var failedRequest = requests.failedRequest;
 var successfulRequest = requests.successfulRequest;
+
+var proxy = require("./proxy");
+var doProxy = proxy.doProxy;
+var doTransformedProxy = proxy.doTransformedProxy;
 
 function getTemplate(fname) {
     return fs.readFileSync(TDIR + fname, 'utf-8');
@@ -70,66 +73,6 @@ function makelogincookie(cookiename,  cookievalue, days) {
     var expdate = new Date(new Date().getTime() + milisecs);
     var cookie = connectutils.serializeCookie(cookiename, cookievalue, {'expires': expdate, 'path': '/'});
     return {'unique': cookievalue, 'cookie': cookie, 'expdateinsecs': secs};
-}
-
-function doProxy(proxyoptions, req, res) {
-    console.log("-----------------Request " + req.method + " " + req.url);
-    var proxy_request = http.get(proxyoptions, function (proxy_response) {
-        proxy_response.addListener('data', function (chunk) {
-            res.write(chunk, 'binary');
-        });
-        proxy_response.addListener('end', function () {
-	    // console.log('proxy request has ended.');
-            res.end();
-        });
-        res.writeHead(proxy_response.statusCode, proxy_response.headers);
-    }).on('error', function (e) {
-        console.log("Got error: " + e.message);
-    });
-
-    //BELOW is not needed. presumably helps in POST
-    req.addListener('data', function (chunk) {
-        //console.log("proxyrequest.write");
-        proxy_request.write(chunk, 'binary');
-    });
-
-    req.addListener('end', function () {
-        //console.log("proxyrequest.end");
-        proxy_request.end();
-    });
-
-    //next();
-}
-
-function doTransformedProxy(proxyoptions, req, res, transformcallback) {
-    console.log("TP-----------------Request " + req.method + " " + req.url);
-    var completebuffer = '';
-    var proxy_request = http.get(proxyoptions, function (proxy_response) {
-        proxy_response.addListener('data', function (chunk) {
-            //console.log("response.write");
-            completebuffer = completebuffer + chunk;
-            //res.write(chunk, 'binary');
-        });
-        proxy_response.addListener('end', function () {
-            console.log("response.end");
-            res.end(transformcallback(completebuffer));
-        });
-        res.writeHead(proxy_response.statusCode, proxy_response.headers);
-
-    }).on('error', function (e) {
-        console.log("Got error: " + e.message);
-    });
-
-    //BELOW is not needed. presumably helps in POST
-    req.addListener('data', function (chunk) {
-        //console.log("proxyrequest.write");
-        proxy_request.write(chunk, 'binary');
-    });
-    req.addListener('end', function () {
-        //console.log("proxyrequest.end");
-        proxy_request.end();
-    });
-    //next();
 }
 
 function postHandler(req, res, tcallback) {
