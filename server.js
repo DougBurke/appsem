@@ -27,6 +27,12 @@ var redis_client = require("redis").createClient();
 var RedisStore = require('connect-redis')(connect);
 //var uuid = require('node-uuid');
 
+var requests = require("./requests");
+
+var completeRequest = requests.completeRequest;
+var failedRequest = requests.failedRequest;
+var successfulRequest = requests.successfulRequest;
+
 function getTemplate(fname) {
     return fs.readFileSync(TDIR + fname, 'utf-8');
 }
@@ -53,58 +59,6 @@ var isArray = function (o) {
     return (o instanceof Array) ||
         (Object.prototype.toString.apply(o) === '[object Array]');
 };
-
-// Actually create and finish the request. The options argument
-// controls the choice of arguments and defoptions gives the default
-// values. The current approach is probably too flexible for its
-// needs.
-//
-// The return message is sent using the keyword value set
-// to the message value.
-//
-function completeRequest(res, options, defoptions) {
-
-    var opts = {},
-        out = {},
-        omsg = "",
-        key;
-    for (key in defoptions) {
-	if (key in options) {
-	    opts[key] = options[key];
-	} else {
-	    opts[key] = defoptions[key];
-	}
-    }
-
-    res.writeHead(200, "OK", {'Content-Type': 'application/json'});
-    out[opts.keyword] = opts.message;
-    omsg = JSON.stringify(out);
-    console.log("Returning: ", omsg);
-    res.end(omsg);
-}
-
-// The request failed so send back our generic "you failed" JSON
-// payload.
-//
-// The options argument is used to set the name and value
-// of the value returned; 
-//      keyword, defaults to 'success'
-//      message, defaults to 'undefined'
-//
-function failedRequest(res, options) {
-    completeRequest(res, options || {}, { 'keyword': 'success', 'message': 'undefined' });
-}
-
-// The request succeeded.
-//
-// The options argument is used to set the name and value
-// of the value returned; 
-//      keyword, defaults to 'success'
-//      message, defaults to 'defined'
-//
-function successfulRequest(res, options) {
-    completeRequest(res, options || {}, { 'keyword': 'success', 'message': 'defined' });
-}
 
 function makelogincookie(cookiename,  cookievalue, days) {
     var secs = days * 24 * 60 * 60;
