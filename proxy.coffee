@@ -1,5 +1,12 @@
 ###
 Simple proxy handling of requests.
+
+TODO:
+  - an error during a proxied call to Solr does not result in
+    firing the error handler, so we are obviously not
+    catching things correctly, and need some indication of
+    error to the caller.
+
 ###
 
 http = require 'http'
