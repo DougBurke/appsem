@@ -7,12 +7,12 @@ url = require 'url'
 mustache = require 'mustache'
 redis_client = require('redis').createClient()
 
-# TODO: clean up use of configuration information
-TDIR = __dirname + '/static/ajax-solr/templates/'
-SITEPREFIX = '/semantic2/alpha'
-STATICPREFIX = '/static'
+var config = require("./config").config;
+var SITEPREFIX = config.SITEPREFIX;
+var STATICPREFIX = config.STATICPREFIX;
+var TEMPLATEDIR = config.TEMPLATEDIR;
 
-getTemplate = (fname) -> fs.readFileSync("#{TDIR}#{fname}", 'utf-8')
+getTemplate = (fname) -> fs.readFileSync("#{TEMPLATEDIR}#{fname}", 'utf-8')
 
 maint = getTemplate 'template.html'
 partials =
@@ -55,17 +55,17 @@ doPublications = doView "Publications", bodybodypub,
     pageclass: 'publications'
     haswidgets: true
     siteprefix: SITEPREFIX
-    staticprefix: SITEPREFIX + STATICPREFIX
+    staticprefix: STATICPREFIX
 
   bodyhead:
     isitchosenpublications: 'chosen'
     siteprefix: SITEPREFIX
-    staticprefix: SITEPREFIX + STATICPREFIX
+    staticprefix: STATICPREFIX
 
   bodybody:
     bodyright:
       siteprefix: SITEPREFIX
-      staticprefix: SITEPREFIX + STATICPREFIX
+      staticprefix: STATICPREFIX
 
 doObservations = doView "Observations", bodybodyobsv,
   pagehead:
@@ -73,17 +73,17 @@ doObservations = doView "Observations", bodybodyobsv,
     pageclass: 'observations'
     haswidgets: true
     siteprefix: SITEPREFIX
-    staticprefix: SITEPREFIX + STATICPREFIX
+    staticprefix: STATICPREFIX
 
   bodyhead:
     isitchosenobservations: 'chosen'
     siteprefix: SITEPREFIX
-    staticprefix: SITEPREFIX + STATICPREFIX
+    staticprefix: STATICPREFIX
 
   bodybody:
     bodyright:
       siteprefix: SITEPREFIX
-      staticprefix: SITEPREFIX + STATICPREFIX
+      staticprefix: STATICPREFIX
 
 #
 # In pubsub branch a lot of this complication has been removed
@@ -232,17 +232,17 @@ doSaved = (req, res, next) ->
       pageclass: 'saved'
       haswidgets: false
       siteprefix: SITEPREFIX
-      staticprefix: SITEPREFIX+STATICPREFIX
+      staticprefix: STATICPREFIX
 
     bodyhead:
       isitchosensaved: 'chosen'
       current_url: req.url
       siteprefix: SITEPREFIX
-      staticprefix: SITEPREFIX+STATICPREFIX
+      staticprefix: STATICPREFIX
 
     bodybody:
       siteprefix: SITEPREFIX
-      staticprefix: SITEPREFIX+STATICPREFIX
+      staticprefix: STATICPREFIX
 
   lpartials = JSON.parse globpartialsjson
   lpartials.bodybody = bodybodysaved

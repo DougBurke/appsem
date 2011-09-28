@@ -3,20 +3,6 @@
 
 "use strict"; // for testing in JSLint
 
-var SITEPREFIX = '';
-var SITEPREFIX = '/semantic2/alpha';
-var STATICPREFIX = '/static';
-var SOLRHOST = 'labs.adsabs.harvard.edu';
-var SOLRURL = '/semanticsolr2/solr';
-var SOLRHOST = 'localhost';
-var SOLRURL = '/solr';
-// var SOLRPORT = 8983;
-var SOLRPORT = 8984;
-var ADSHOST = 'adsabs.harvard.edu';
-var ADSURL = '/cgi-bin/insert_login/credentials/';
-var TDIR = __dirname + '/static/ajax-solr/templates/';
-//SOLRHOST = 'localhost';
-//SOLRURL = '/solr';
 var connect = require('connect');
 var connectutils = connect.utils;
 var http = require('http');
@@ -46,6 +32,15 @@ var views = require("./views");
 var doPublications = views.doPublications;
 var doObservations = views.doObservations;
 var doSaved = views.doSaved;
+
+var config = require("./config").config;
+var SITEPREFIX = config.SITEPREFIX;
+var STATICPREFIX = config.STATICPREFIX;
+var SOLRHOST = config.SOLRHOST;
+var SOLRURL = config.SOLRURL;
+var SOLRPORT = config.SOLRPORT;
+var ADSHOST = config.ADSHOST;
+var ADSURL = config.ADSURL;
 
 // Needed to check whether we get a string or an array
 // of strings. Taken from
@@ -460,7 +455,7 @@ server.use(connect.cookieParser());
 //Especially since we dont seem to know how not to reextend the time for session cookies.
 //thats prolly right behavior for session cookies since the more people use the more we wanna keep them on
 //server.use(connect.session({ store: new RedisStore, secret: 'keyboard cat', cookie :{maxAge: 31536000000} }));
-server.use(SITEPREFIX+STATICPREFIX+'/', connect.static(__dirname + '/static/ajax-solr/'));
+server.use(STATICPREFIX+'/', connect.static(__dirname + '/static/ajax-solr/'));
 server.use(SITEPREFIX+'/solr/', solrrouter);
 server.use(SITEPREFIX+'/explorer/', explorouter);
 server.use(SITEPREFIX+'/adsjsonp', makeADSJSONPCall);
