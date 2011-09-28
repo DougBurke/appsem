@@ -36,6 +36,12 @@ var proxy = require("./proxy");
 var doProxy = proxy.doProxy;
 var doTransformedProxy = proxy.doTransformedProxy;
 
+var user = require("./user");
+var loginUser = user.loginUser;
+var logoutUser = user.logoutUser;
+var insertUser = user.insertUser;
+var getUser = user.getUser;
+
 function getTemplate(fname) {
     return fs.readFileSync(TDIR + fname, 'utf-8');
 }
@@ -63,17 +69,6 @@ var isArray = function (o) {
         (Object.prototype.toString.apply(o) === '[object Array]');
 };
 
-function makelogincookie(cookiename,  cookievalue, days) {
-    var secs = days * 24 * 60 * 60;
-    var milisecs = secs * 1000;
-    // I've seen some funny behaviour with Date.now() so switching
-    // to a more explicit method which has worked elsewhere, but is probably
-    // not an issue here.
-    //var expdate = new Date(Date.now() + milisecs);
-    var expdate = new Date(new Date().getTime() + milisecs);
-    var cookie = connectutils.serializeCookie(cookiename, cookievalue, {'expires': expdate, 'path': '/'});
-    return {'unique': cookievalue, 'cookie': cookie, 'expdateinsecs': secs};
-}
 
 function postHandler(req, res, tcallback) {
     if (req.method === 'POST') {
@@ -103,120 +98,6 @@ var solrrouter = connect(
     })
 );
 
-function insertUser(jsonpayload, req, res, next) {
-    var logincookie = makelogincookie('logincookie', connectutils.uid(16), 365);
-    var cookie = logincookie.cookie;
-    var responsedo = function (err, reply) {
-        res.writeHead(200, "OK", {'Content-Type': 'application/json',
-				  'Set-Cookie': cookie
-				 });
-        res.end();
-    };
-    var mystring = jsonpayload;
-    console.log('[[' + mystring + ']]');
-    var jsonobj = JSON.parse(mystring);
-    var email = jsonobj.email;
-    Object.keys(jsonobj).forEach(function (key) {
-	// TODO: Do we really need to det dajson and cookieval on each iteration?
-	redis_client.multi([["hset", email, key, jsonobj[key]],
-			    ["hset", email, 'dajson', jsonpayload],
-			    ["hset", email, 'cookieval', cookie]
-			   ]).exec();
-    });
-    
-    // Store the user details (the unique value and email) in sets to make it
-    // easier to identify them later. This may not be needed. Also, should the
-    // unique value have a time-to-live associated with it (and can this be done
-    // within a set)?
-    //
-    //Since thenext set will be the last one the others will have completed.Not that it matters as we dont error handle right now.
-    //redis_client.setex('auth:' + logincookie['unique'], logincookie['expdateinsecs'], logincookie['cookie']);
-    //on the fly we'll have savedsearches:email and savedpubs:email
-    // redis_client.setex('email:' + logincookie['unique'], logincookie['expdateinsecs'], email, responsedo);
-    //
-    redis_client.multi([["sadd", "useremails", email],
-			["sadd", "userids", logincookie.unique],
-			["setex", 'email:' + logincookie.unique, logincookie.expdateinsecs, email]
-		       ]).exec(responsedo);
-
-} // insertUser
-
-function loginUser(req, res, next) {
-    var urlparse = url.parse(req.url, true);
-    var redirect = urlparse.query.redirect;
-    var currenttoken = connectutils.uid(16);
-    var adsurl = 'http://adsabs.harvard.edu/cgi-bin/nph-manage_account?man_cmd=login&man_url=' + redirect;
-    var startupcookie = makelogincookie('startupcookie',currenttoken, 0.005);
-    console.log('REDIRECT', redirect);
-    var responsedo = function (err, reply) {
-        res.writeHead(302, "Redirect", {
-            'Set-Cookie': startupcookie.cookie,
-            'Location': redirect
-        });
-        res.statusCode = 302;
-        res.end();
-    };
-    responsedo();
-    //redis_client.set('startup:' + currenttoken, currenttoken, responsedo)
-}
-function logoutUser(req, res, next) {
-    console.log("::::::::::logoutCookies", req.cookies);
-    var logincookie = req.cookies.logincookie;
-    var newlogincookie = makelogincookie('logincookie', logincookie, -1);
-    var redirect = url.parse(req.url, true).query.redirect;
-    var responsedo = function (err, reply) {
-        res.writeHead(302, "Redirect", {
-            'Set-Cookie': newlogincookie.cookie,
-            'Location': redirect
-        });
-        res.statusCode = 302;
-        res.end();
-    };
-    //expire it now
-    redis_client.expire('email:' + logincookie, 0, responsedo);
-}
-
-function getUser(req, res, next) {
-    var stashmail;
-    var logincookie = req.cookies.logincookie;
-    var startupcookie = req.cookies.startupcookie;
-    var sendback = {};
-    var newstartupcookie;
-
-    if (startupcookie) {
-        newstartupcookie = makelogincookie('startupcookie', startupcookie, -1);
-	sendback.startup = startupcookie;
-    } else {
-	sendback.startup = 'undefined';
-    }
-
-    if (logincookie === undefined) {
-        var headerdict = {'Content-Type': 'application/json'};
-        if (startupcookie) {
-            headerdict['Set-Cookie'] = newstartupcookie.cookie;
-        }
-        res.writeHead(200, "OK", headerdict);
-        sendback.email = 'undefined';
-        stashmail = JSON.stringify(sendback);
-        console.log("REPLY",stashmail);
-        res.end(stashmail);
-        return;
-    }
-    res.writeHead(200, "OK", {'Content-Type': 'application/json'});
-    console.log('==================',logincookie);    
-    redis_client.get('email:' + logincookie, function (err, reply) {
-        if (err) {
-            //not really an error but user aint there
-            next(err);
-        } else {
-            sendback.email = String(reply);
-            stashmail = JSON.stringify(sendback);
-            console.log("REPLY",stashmail);
-            res.end(stashmail);
-            
-        }        
-    });
-} // getUser
 
 /*
  * Call cb with the login cookie otherwise return
