@@ -68,7 +68,7 @@ savePub = (payload, req, res, next) ->
       margs = [['hset', "savedbibcodes:#{email}", savedPub, bibCode],
                ['hset', "savedtitles:#{email}", savedPub, title],
                ['zadd', "savedpub:#{email}", saveTime, savedPub]]
-      resid_client.multi(margs).exec (err2, reply) -> successfulRequest res
+      redis_client.multi(margs).exec (err2, reply) -> successfulRequest res
 
 
 # Get all the elements for the given key, stored
