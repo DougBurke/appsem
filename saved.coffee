@@ -103,7 +103,7 @@ getSavedSearches = (req, res, next) ->
 
 getSavedPubs = (req, res, next) ->
   kword = 'savedpubs'
-  dofunc = (loginid) ->
+  doIt = (loginid) ->
     redis_client.get "email:#{loginid}", (err, email) ->
       getSortedElements true, "savedpub:#{email}", (err2, searches) ->
         console.log "getSavedPubs reply=#{searches} err=#{err2}"
