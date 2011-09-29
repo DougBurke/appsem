@@ -1,0 +1,15 @@
+#!/bin/tcsh -f
+
+if ( -x ./node_modules/coffee-script/bin/coffee ) then
+   set coffee = ./node_modules/coffee-script/bin/coffee
+else 
+   set coffee = coffee
+endif
+
+echo "Using: $coffee"
+echo ""
+
+foreach x ( *.coffee )
+  echo "Processing: $x"
+  $coffee -c $x
+end
