@@ -7,10 +7,10 @@ url = require 'url'
 mustache = require 'mustache'
 redis_client = require('redis').createClient()
 
-var config = require("./config").config;
-var SITEPREFIX = config.SITEPREFIX;
-var STATICPREFIX = config.STATICPREFIX;
-var TEMPLATEDIR = config.TEMPLATEDIR;
+config = require("./config").config
+SITEPREFIX = config.SITEPREFIX
+STATICPREFIX = config.STATICPREFIX
+TEMPLATEDIR = config.TEMPLATEDIR
 
 getTemplate = (fname) -> fs.readFileSync("#{TEMPLATEDIR}#{fname}", 'utf-8')
 
