@@ -14,16 +14,13 @@ a grab bag of functionality.
 
 completeRequest = (res, options, defoptions) ->
   opts = {}
-  out = {}
-  omsg = ""
-
-  for key in defoptions
-    opts[key] = if key in options then options[key] else defoptions[key]
+  for key, defval of defoptions
+    opts[key] = if key of options then options[key] else defval
 
   res.writeHead 200, "OK", 'Content-Type': 'application/json'
+  out = {}
   out[opts.keyword] = opts.message
   omsg = JSON.stringify out
-  console.log "Returning: #{omsg}"
   res.end omsg
 
 
