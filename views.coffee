@@ -202,24 +202,23 @@ createSavedPubTemplates = (view, nowDate, pubkeys, bibcodes, pubtitles, pubtimes
 #
 getSortedElementsAndScores = (flag, key, cb) ->
   redis_client.zcard key, (e1, nelem) ->
-    n = nelem - 1
-    if n is 0
+    if nelem is 0
       cb e1, elements: [], scores: []
 
     else
       splitIt = (err, values) ->
         # in case nelem has changed
-        nval = 2 * values.length
+        nval = values.length - 1
         response =
-          elements: (values[i] for i in [0..nval-1] by 2)
+          elements: (values[i] for i in [0..nval] by 2)
           scores:   (values[i] for i in [1..nval] by 2)
 
         cb err, response
 
       if flag
-        redis_client.zrange key, 0, n, "withscores", splitIt
+        redis_client.zrange key, 0, nelem, "withscores", splitIt
       else
-        redis_client.zrevrange key, 0, n, "withscores", splitIt
+        redis_client.zrevrange key, 0, nelem, "withscores", splitIt
 
 
 doSaved = (req, res, next) ->
@@ -248,7 +247,7 @@ doSaved = (req, res, next) ->
   lpartials.bodybody = bodybodysaved
 
   res.writeHead 200, 'Content-Type': 'text/html; charset=UTF-8'
-  #console.log("loginCookie?=#{loginCookie?}")
+  #console.log "loginCookie?=#{loginCookie?}"
   #console.log "loginCookie=#{loginCookie}"
   if not loginCookie?
     res.end mustache.to_html(maint, view, lpartials)
@@ -270,6 +269,7 @@ doSaved = (req, res, next) ->
       createSavedSearchTemplates view, nowDate, searchkeys, searchtimes
       getSortedElementsAndScores false, "savedpub:#{email}", (e3, savedpubs) ->
         #console.log "e3=#{e3}"
+        #console.log "savedpubs=#{JSON.stringify savedpubs}"
         pubkeys = savedpubs.elements
         pubtimes = savedpubs.scores
         #console.log "pubkeys=#{pubkeys}"
