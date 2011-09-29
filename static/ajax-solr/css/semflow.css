@@ -310,6 +310,10 @@ span.missionname {
     left: -1em;
 }
 
+/*
+ * Styling of elements on the saved page
+ */
+
 div.saved-items {
     padding-bottom: 1em;
 }
@@ -321,6 +325,10 @@ div.saved-items h1 {
 
 div.saved-items form {
     padding-top: 1em;
+}
+
+div.formactions input {
+    margin-right: 0.4em; // probably very-sensitive to the browser/OS
 }
 
 /*

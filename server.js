@@ -475,6 +475,33 @@ function getSavedSearches(req, res, next) {
 
 }
 
+// Need to send back enough information for the client to
+// construct the saved-search table.
+//
+function getSavedSearches2(req, res, next) {
+
+    ifLoggedIn(req, res, function(loginid) {
+	redis_client.get('email:' + loginid, function (err, email) {
+	    getSortedElementsAndScores(false, 'savedsearch:' + email, function (err, searches) {
+		if (err) {
+		    console.log("*** getSavedSearches2: failed to get saved search for loginid=" + loginid + " email=" + email);
+		    failedRequest(res, { 'keyword': 'savedsearches' } );
+		} else {
+		    var nowDate = new Date().getTime();
+		    var view = {};
+		    createSavedSearchTemplates(view, nowDate,
+					       searches.elements,
+					       searches.scores);
+
+		    // console.log("Should be sending back: " + JSON.stringify(view));
+		    successfulRequest(res, { 'keyword': 'savedsearches', 'message': view } );
+		}
+            });
+	});
+    }, { 'keyword': 'savedsearches' });
+
+} // getSavedSearches2
+
 /*
  * We only return the document ids here; for the full document info
  * see doSaved.
@@ -493,6 +520,40 @@ function getSavedPubs(req, res, next) {
     }, {'keyword': 'savedpubs'});
 
 }
+
+// Need to send back enough information for the client to
+// construct the saved-publication table.
+//
+function getSavedPubs2(req, res, next) {
+
+    ifLoggedIn(req, res, function (loginid) {
+	redis_client.get('email:' + loginid, function (err, email) {
+	    getSortedElementsAndScores(false, 'savedpub:' + email, function (err, savedpubs) {
+		if (err) {
+		    console.log("*** getSavedPubs2: failed to get saved publications for loginid=" + loginid + " email=" + email);
+		    failedRequest(res, { 'keyword': 'savedpubs' } );
+		} else {
+		    var pubkeys = savedpubs.elements;
+		    var pubtimes = savedpubs.scores;
+		    redis_client.hmget('savedtitles:' + email, pubkeys, function (err, pubtitles) {
+			redis_client.hmget('savedbibcodes:' + email, pubkeys, function (err, bibcodes) {
+			    
+			    var nowDate = new Date().getTime();
+			    var view = {};
+			    createSavedPubTemplates(view, nowDate, 
+						    pubkeys, bibcodes, pubtitles, pubtimes);
+			    
+			    // console.log("Should be sending back: " + JSON.stringify(view));
+			    successfulRequest(res, { 'keyword': 'savedpubs', 'message': view } );
+
+			});
+		    });
+		}
+	    });
+	});
+    }, {'keyword': 'savedpubs'});
+
+} // getSavedPubs2
 
 function makeADSJSONPCall(req, res, next) {
     //Add logic if the appropriate cookie is not defined
@@ -722,31 +783,6 @@ function doObservations(req, res, next) {
 }
 
 /*
- * Given a saved search, which looks something like
- * "fq=keywords_s%3A%22stars%20luminosity%20function%3Bmass%20function%22&fq=author_s%3A%22Stahl%2C%20O%22&fq=instruments_s%3AMAST%2FIUE%2FLWR&q=*%3A*"
- * return a (hopefully) human-readable version.
- */
-function searchToText(searchTerm) {
-    // lazy way to remove the trailing search term
-    var s = "&" + searchTerm;
-    s = s.replace('&q=*%3A*', '');
-
-    // only decode after the initial split to protect against the
-    // unlikely event that &fq= appears as part of a search term.
-    var terms = s.split(/&fq=/);
-
-    // ignore the first entry as '' by construction
-    var out = "";
-    var i;
-    for (i = 1; i < terms.length; i++) {
-	var toks = decodeURIComponent(terms[i]).split(':', 2);
-	out += toks[0] + "=" + toks[1] + " ";
-    }
-
-    return out;
-}
-
-/*
  * Returns a string representation of timeString, which
  * should be a string containing the time in milliseconds,
  * nowDate is the "current" date in milliseconds.
@@ -806,7 +842,6 @@ function createSavedSearchTemplates(view, nowDate, searchkeys, searchtimes) {
 	skey = searchkeys[i];
 	stime = searchtimes[i];
 	view.savedsearches[i] = { 'searchuri': skey,
-				  'searchtext': searchToText(skey),
 				  'searchtime': stime,
 				  'searchtimestr': timeToText(nowDate, stime),
 				  'searchctr': i };
@@ -854,33 +889,8 @@ function doSaved(req, res, next) {
     };
     var lpartials = JSON.parse(globpartialsjson);
     lpartials.bodybody = bodybodysaved;
-    var html;
     res.writeHead(200, { 'Content-Type': 'text/html; charset=UTF-8' });
-    if (logincookie !== undefined) {
-	// var nowDate = Date().now;
-	var nowDate = new Date().getTime();
-	redis_client.get('email:'+logincookie, function (err, email) {
-	    getSortedElementsAndScores(false, 'savedsearch:'+email, function (err, savedsearches) {
-		var searchkeys = savedsearches.elements;
-		var searchtimes = savedsearches.scores;
-		getSortedElementsAndScores(false, 'savedpub:'+email, function (err, savedpubs) {
-		    var pubkeys = savedpubs.elements;
-		    var pubtimes = savedpubs.scores;
-		    redis_client.hmget('savedtitles:'+email, pubkeys, function (err, pubtitles) {
-			redis_client.hmget('savedbibcodes:'+email, pubkeys, function (err, bibcodes) {
-			    createSavedSearchTemplates(view, nowDate, searchkeys, searchtimes);
-			    createSavedPubTemplates(view, nowDate, pubkeys, bibcodes, pubtitles, pubtimes);
-			    res.end(mustache.to_html(maint, view, lpartials));
-			});
-		    });
-		});
-	    });
-	});
-
-    } else {
-        res.end(mustache.to_html(maint, view, lpartials));
-    }
-    
+    res.end(mustache.to_html(maint, view, lpartials));   
 }
 
 // This is just temporary code:
@@ -934,6 +944,7 @@ server.use(SITEPREFIX+'/logout', logoutUser);
 server.use(SITEPREFIX+'/login', loginUser);
 server.use(SITEPREFIX+'/savesearch', saveSearchToRedis);
 server.use(SITEPREFIX+'/savedsearches', getSavedSearches);
+server.use(SITEPREFIX+'/savedsearches2', getSavedSearches2);
 server.use(SITEPREFIX+'/savepub', savePubToRedis);
 
 server.use(SITEPREFIX+'/deletesearch', deleteSearchFromRedis);
@@ -948,6 +959,7 @@ server.use(SITEPREFIX+'/deletepubs', deletePubsFromRedis);
 server.use(SITEPREFIX+'/adsproxy', doADSProxy);
 
 server.use(SITEPREFIX+'/savedpubs', getSavedPubs);
+server.use(SITEPREFIX+'/savedpubs2', getSavedPubs2);
 
 // not sure of the best way to do this, but want to privide access to
 // ajax-loader.gif and this way avoids hacking ResultWidget.2.0.js

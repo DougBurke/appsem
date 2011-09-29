@@ -67,6 +67,7 @@ var Manager;
 		}
 		
 		//this gets called all the time. How to avoid this?
+		// TODO: do not need to call this when not logged in
 		$.getJSON(SITEPREFIX+'/savedsearches', function(data){
 		    var thissearchurl=location.href.split("#")[1];
 		    console.log("THISSEARCHURL", thissearchurl);
@@ -90,14 +91,8 @@ var Manager;
 	
 	var fields = [ 'keywords', 'author', 'objecttypes', 'objectnames', 'obsvtypes', 'obsids', 'instruments', 'missions', 'emdomains', 'targets', 'datatypes', 'propids', 'proposaltype', 'proposalpi'];
 	var facet_fields= [ 'keywords_s', 'author_s', 'objecttypes_s', 'objectnames_s', 'obsvtypes_s', 'obsids_s', 'instruments_s', 'obsv_mission_s', 'emdomains_s', 'targets_s', 'datatypes_s', 'propids_s', 'proposaltype_s', 'proposalpi_s'];
-	var field_names = ['Keyword', 'Author', 'Object Type', 'Object Name', 'Observation Type', 'Obsid', 'Instrument',
-			   'Mission', 'Wavelength', 'Target Name',
-			   'Data Type', 'Proposal ID', 'Proposal Type', 'Proposal PI'];
-	var field_map = {};
 	
 	for (var i = 0, l = fields.length; i < l; i++) {
-	    field_map[facet_fields[i]] = field_names[i];
-	    
 	    Manager.addWidget(new AjaxSolr.TagcloudWidget({
 		id: fields[i],
 		target: '#' + fields[i],
@@ -105,17 +100,10 @@ var Manager;
 	    }));
 	}
 	
-	// Additions
-	field_map['pubyear_i'] = 'Publication Year'
-	field_map['ra_f'] = 'RA'
-	field_map['dec_f'] = 'Dec'
-	field_map['obsvtime_d'] = 'Observation Date'
-	field_map['exptime_f'] = 'Exposure Time'
-	
 	Manager.addWidget(new AjaxSolr.CurrentSearchWidget({
             id: 'currentsearch',
             target: '#selection',
-	    fieldmap: field_map,
+	    fieldmap: fieldname_map,
 	    allowmulti: facet_fields
 	    
 	}));
@@ -124,7 +112,7 @@ var Manager;
             target: '#search',
             field: 'text',
             fields: facet_fields.concat(['bibcode']),
-	    fieldmap: field_map
+	    fieldmap: fieldname_map
 	}));
 	Manager.addWidget(new AjaxSolr.YearWidget({
             id: 'pubyear',
