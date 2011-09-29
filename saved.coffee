@@ -3,9 +3,6 @@ Handles saved items - e.g. searches and publications - that involves
 accessing information from Redis.
 ###
 
-# NOTE: this gets simplified a lot in the pubsub branch, when much
-# of the functionality is moved out to the client.
-
 redis_client = require("redis").createClient()
 
 requests = require("./requests")
@@ -70,6 +67,96 @@ savePub = (payload, req, res, next) ->
                ['zadd', "savedpub:#{email}", saveTime, savedPub]]
       redis_client.multi(margs).exec (err2, reply) -> successfulRequest res
 
+# Returns a string representation of timeString, which
+# should be a string containing the time in milliseconds,
+# nowDate is the "current" date in milliseconds.
+#
+timeToText = (nowDate, timeString) ->
+  t = parseInt timeString, 10
+  delta = nowDate - t
+  if delta < 1000
+    return "Now"
+
+  else if delta < 60000
+    return "#{Math.floor(delta/1000)}s ago"
+
+  else if delta < 60000 * 60
+    m = Math.floor(delta / 60000)
+    s = Math.floor((delta - m * 60000) /1000)
+    out = "#{m}m"
+    if s isnt 0
+      out += " #{s}s"
+    return "#{out} ago"
+
+  else if delta < 60000 * 60 * 24
+    h = Math.floor(delta / (60000 * 60))
+    delta = delta - h * 60000 * 60
+    m = Math.floor(delta / 60000)
+    out = "#{h}h"
+    if m isnt 0
+      out += " #{m}m"
+    return "#{out} ago"
+
+  d = new Date(t)
+  return d.toUTCString()
+
+# Modify the object view to add in the needed values
+# given the search results. This was originally used with Mustache
+# views - hence the terminology - but the data is now passed
+# back to the client as JSON.
+#
+createSavedSearchTemplates = (nowDate, searchkeys, searchtimes) ->
+  view = {}
+  nsearch = searchkeys.length
+
+  if nsearch is 0
+    view.hassearches = false
+    view.savedsearches = []
+
+  else
+    view.hassearches = true
+
+    makeTemplate = (ctr) ->
+      key = searchkeys[ctr]
+      time = searchtimes[ctr]
+      out =
+        searchuri: key
+        searchtime: time
+        searchtimestr: timeToText nowDate, time
+        searchctr: ctr
+      return out
+
+    view.savedsearches = (makeTemplate i for i in [0..nsearch-1])
+
+  return view
+
+createSavedPubTemplates = (nowDate, pubkeys, bibcodes, pubtitles, pubtimes) ->
+  view = {}
+  npub = pubkeys.length
+
+  if npub is 0
+    view.haspubs = false
+    view.savedpubs = []
+
+  else
+    view.haspubs = true
+
+    makeTemplate = (ctr) ->
+      bibcode = bibcodes[ctr]
+      linkuri = "bibcode%3A#{ bibcode.replace(/&/g, '%26') }"
+      out =
+        pubid: pubkeys[ctr]
+        linktext: pubtitles[ctr]
+        linkuri: linkuri
+        pubtime: pubtimes[ctr]
+        pubtimestr: timeToText nowDate, pubtimes[ctr]
+        bibcode: bibcode
+        pubctr: ctr
+      return out
+
+    view.savedpubs = (makeTemplate i for i in [0..npub-1])
+
+  return view
 
 # Get all the elements for the given key, stored
 # in a sorted list, and sent it to callback
@@ -86,6 +173,31 @@ getSortedElements = (flag, key, cb) ->
     else
       redis_client.zrevrange key, 0, nelem, cb
 
+# As getSortedElements but the values sent to the callback is
+# a hash with two elements:
+#    elements  - the elements
+#    scores    - the scores
+#
+getSortedElementsAndScores = (flag, key, cb) ->
+  redis_client.zcard key, (e1, nelem) ->
+    if nelem is 0
+      cb e1, elements: [], scores: []
+
+    else
+      splitIt = (err, values) ->
+        # in case nelem has changed
+        nval = values.length - 1
+        response =
+          elements: (values[i] for i in [0..nval] by 2)
+          scores:   (values[i] for i in [1..nval] by 2)
+
+        cb err, response
+
+      if flag
+        redis_client.zrange key, 0, nelem, "withscores", splitIt
+      else
+        redis_client.zrevrange key, 0, nelem, "withscores", splitIt
+
 getSavedSearches = (req, res, next) ->
   kword = 'savedsearches'
   doIt = (loginid) ->
@@ -95,6 +207,26 @@ getSavedSearches = (req, res, next) ->
         successfulRequest res,
           keyword: kword
           message: searches
+
+  ifLoggedIn req, res, doIt, keyword: kword
+
+# Unlike getSavedSearches we return the template values for
+# use by the client to create the page
+
+getSavedSearches2 = (req, res, next) ->
+  kword = 'savedsearches'
+  doIt = (loginid) ->
+    redis_client.get "email:#{loginid}", (err, email) ->
+      getSortedElementsAndScores false, "savedsearch:#{email}", (err2, searches) ->
+        if err2?
+          console.log "*** getSavedSearches2: failed for loginid=#{loginid} email=#{email} err=#{err2}"
+          failedRequest res, keyword: kword
+        else
+          nowDate = new Date().getTime()
+          view = createSavedSearchTemplates nowDate, searches.elements, searches.scores
+          successfulRequest res,
+            keyword: kword
+            message: view
 
   ifLoggedIn req, res, doIt, keyword: kword
 
@@ -110,6 +242,31 @@ getSavedPubs = (req, res, next) ->
         successfulRequest res,
           keyword: kword
           message: searches
+
+  ifLoggedIn req, res, doIt, keyword: kword
+
+# Unlike getSavedPubs we return the template values for
+# use by the client to create the page
+
+getSavedPubs2 = (req, res, next) ->
+  kword = 'savedpubs'
+  doIt = (loginid) ->
+    redis_client.get "email:#{loginid}", (err, email) ->
+      getSortedElementsAndScores false, "savedpub:#{email}", (err2, savedpubs) ->
+        if err2?
+          console.log "*** getSavedPubs2: failed for loginid=#{loginid} email=#{email} err=#{err2}"
+          failedRequest res, keyword: kword
+
+        else
+          pubkeys = savedpubs.elements
+          pubtimes = savedpubs.scores
+          redis_client.hmget "savedtitles:#{email}", pubkeys, (err2, pubtitles) ->
+            redis_client.hmget "savedbibcodes:#{email}", pubkeys, (err3, bibcodes) ->
+              nowDate = new Date().getTime()
+              view = createSavedPubTemplates nowDate, pubkeys, bibcodes, pubtitles, pubtimes
+              successfulRequest res,
+                keyword: kword
+                message: view
 
   ifLoggedIn req, res, doIt, keyword: kword
 
@@ -217,4 +374,6 @@ exports.deletePubs     = deleteItems "deletePubs",     "pubid",    removeDocs
 exports.saveSearch = saveSearch
 exports.savePub = savePub
 exports.getSavedSearches = getSavedSearches
+exports.getSavedSearches2 = getSavedSearches2
 exports.getSavedPubs = getSavedPubs
+exports.getSavedPubs2 = getSavedPubs2

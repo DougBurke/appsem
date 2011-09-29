@@ -154,6 +154,7 @@ server.use SITEPREFIX+'/logout', logoutUser
 server.use SITEPREFIX+'/login', loginUser
 server.use SITEPREFIX+'/savesearch', saveSearchToRedis
 server.use SITEPREFIX+'/savedsearches', saved.getSavedSearches
+server.use SITEPREFIX+'/savedsearches2', saved.getSavedSearches2
 server.use SITEPREFIX+'/savepub', savePubToRedis
 
 server.use SITEPREFIX+'/deletesearch', deleteSearchFromRedis
@@ -168,6 +169,7 @@ server.use SITEPREFIX+'/deletepubs', deletePubsFromRedis
 server.use SITEPREFIX+'/adsproxy', doADSProxy
 
 server.use SITEPREFIX+'/savedpubs', saved.getSavedPubs
+server.use SITEPREFIX+'/savedpubs2', saved.getSavedPubs2
 
 # not sure of the best way to do this, but want to privide access to
 # ajax-loader.gif and this way avoids hacking ResultWidget.2.0.js
