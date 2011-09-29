@@ -35,6 +35,8 @@ var doPublications = views.doPublications;
 var doObservations = views.doObservations;
 var doSaved = views.doSaved;
 
+var saved = require("./saved");
+
 var config = require("./config").config;
 var SITEPREFIX = config.SITEPREFIX;
 var STATICPREFIX = config.STATICPREFIX;
@@ -43,16 +45,6 @@ var SOLRURL = config.SOLRURL;
 var SOLRPORT = config.SOLRPORT;
 var ADSHOST = config.ADSHOST;
 var ADSURL = config.ADSURL;
-
-// Needed to check whether we get a string or an array
-// of strings. Taken from
-// http://stackoverflow.com/questions/1058427/how-to-detect-if-a-variable-is-an-array/1058457#1058457
-//
-var isArray = function (o) {
-    return (o instanceof Array) ||
-        (Object.prototype.toString.apply(o) === '[object Array]');
-};
-
 
 var solrrouter = connect(
     connect.router(function (app) {
@@ -66,132 +58,6 @@ var solrrouter = connect(
 	}); 
     })
 );
-
-
-// A comment on saved times, used in both savePub and saveSearch.
-//
-// Approximate the save time as the time we process the request
-// on the server, rather than when it was made (in case the user's
-// clock is not set sensibly). 
-//
-// For now we save the UTC version of the time and provide no
-// way to change this to something meaningful to the user.
-//
-// Alternatives include:
-//
-// *  the client could send the time as a string, including the
-//    time zone, but this relies on their clock being okay
-//
-// *  the client can send in the local timezone info which can
-//    then be used to format the server-side derived time
-//    Not sure if can trust the time zone offset from the client
-//    if can not trust the time itself. Calculating a useful display
-//    string from the timezone offset is fiddly.
-//
-
-function saveSearch(jsonpayload, req, res, next) {
-    console.log("savedsearchcookies", req.cookies, jsonpayload);
-    var savetime = new Date().getTime();
-
-    ifLoggedIn(req, res, function(loginid) {
-	var jsonobj = JSON.parse(jsonpayload);
-	var savedsearch = jsonobj.savedsearch;
-	redis_client.get('email:' + loginid, function (err, email) {
-
-	    // keep as a multi even though now a single addition
-	    var margs = [["zadd", 'savedsearch:' + email, savetime, savedsearch]
-			];
-	    redis_client.multi(margs).exec(function (err, reply) {
-		successfulRequest(res);
-	    });
-	});
-    });
-
-} // saveSearch
-
-function savePub(jsonpayload, req, res, next) {
-    console.log("savedpubcookies", req.cookies, jsonpayload);
-    var savetime = new Date().getTime();
-
-    ifLoggedIn(req, res, function (loginid) {
-	var jsonobj = JSON.parse(jsonpayload);
-	var savedpub = jsonobj.savedpub;
-	var bibcode = jsonobj.pubbibcode;
-	var title = jsonobj.pubtitle;
-
-	redis_client.get('email:' + loginid, function (err, email) {
-            console.log("REPLY", email);
-
-	    // Moved to a per-user database for titles and bibcodes so that we can delete
-	    // search information. Let's see how this goes compared to "global" values for the
-	    // bibcodes and titles hash arrays.
-	    //
-	    // Should worry about failures here, but not for now.
-	    //
-	    var margs = [["hset", 'savedbibcodes:' + email, savedpub, bibcode],
-			 ["hset", 'savedtitles:' + email, savedpub, title],
-			 ["zadd", 'savedpub:' + email, savetime, savedpub]
-			];
-	    redis_client.multi(margs).exec(function (err, reply) {
-		console.log("Saving publication: ", title);
-		successfulRequest(res);
-	    });
-	});
-    });
-
-} // savePub
-
-/*
- * get all the elements for the given key, stored
- * in a sorted list, and sent it to callback
- * as cb(err,values). If flag is true then the list is sorted in
- * ascending order of score (ie zrange rather than zrevrange)
- * otherwise descending order.
- */
-function getSortedElements(flag, key, cb) {
-
-    redis_client.zcard(key, function (err, nelem) {
-	// could subtract 1 from nelem but it looks like
-	// Redis stops at the end of the list
-	if (flag) {
-	    redis_client.zrange(key, 0, nelem, cb);
-	} else {
-	    redis_client.zrevrange(key, 0, nelem, cb);
-	}
-    });
-}
-
-function getSavedSearches(req, res, next) {
-
-    ifLoggedIn(req, res, function(loginid) {
-	redis_client.get('email:' + loginid, function (err, email) {
-	    getSortedElements(true, 'savedsearch:' + email, function (err, searches) {
-		console.log("GETSAVEDSEARCHESREPLY", searches, err);
-		successfulRequest(res, { 'keyword': 'savedsearches', 'message': searches } );
-            });
-	});
-    }, { 'keyword': 'savedsearches' });
-
-}
-
-/*
- * We only return the document ids here; for the full document info
- * see doSaved.
- */
-  
-function getSavedPubs(req, res, next) {
-    // console.log("::::::::::getSavedPubsCookies", req.cookies);
-
-    ifLoggedIn(req, res, function (loginid) {
-	redis_client.get('email:' + loginid, function (err, email) {
-	    getSortedElements(true, 'savedpub:' + email, function (err, searches) {
-		console.log("GETSAVEDPUBSREPLY", searches, err);
-		successfulRequest(res, { 'keyword': 'savedpubs', 'message': searches } );
-            });
-	});
-    }, {'keyword': 'savedpubs'});
-
-}
 
 function makeADSJSONPCall(req, res, next) {
     //Add logic if the appropriate cookie is not defined
@@ -209,132 +75,6 @@ function makeADSJSONPCall(req, res, next) {
     doTransformedProxy(adsoptions, req, res, isfunc);
 }
 
-// Remove the list of searchids, associated with the given 
-// user cookie, from Redis.
-//
-// At present we require that searchids not be empty; this may
-// be changed.
-//
-function removeSearches(res, loginid, searchids) {
-    if (searchids.length === 0) {
-	console.log("Error: removeSearches called with empty searchids list; loginid=" + loginid);
-	failedRequest(res);
-    } else {
-	redis_client.get('email:' + loginid, function (err, email) {
-	    var margs = [];
-	    var key = 'savedsearch:' + email
-	    var i;
-	    // with Redis v2.4 we will be able to delete multiple keys with a single
-	    // zrem call.
-	    for (i in searchids) {
-		margs.push(["zrem", key, searchids[i]]);
-	    }
-	    redis_client.multi(margs).exec(function (err, reply) {
-		console.log("Assumed we have removed " + searchids.length + " searches from user's saved search list");
-		successfulRequest(res);
-	    });
-	});
-    }
-
-} // removeSearches
-
-// Similar to removeSearches but removes publications.
-//
-function removeDocs(res, loginid, docids) {
-    if (docids.length === 0) {
-	console.log("Error: removeDocs called with empty docids list; loginid=" + loginid);
-	failedRequest(res);
-    } else {
-	redis_client.get('email:' + loginid, function (err, email) {
-	    var margs = [];
-	    var pubkey = 'savedpub:' + email;
-	    var titlekey = 'savedtitles:' + email;
-	    var bibkey = 'savedbibcodes:' + email;
-	    var i;
-	    // In Redis 2.4 zrem and hdel can be sent multiple keys
-	    for (i in docids) {
-		var docid = docids[i];
-		margs.push(["zrem", pubkey, docid]);
-		margs.push(["hdel", titlekey, docid]);
-		margs.push(["hdel", bibkey, docid]);
-	    }
-	    redis_client.multi(margs).exec(function (err, reply) {
-		console.log("Assumed we have removed " + docids.length + " papers from user's saved publication list");
-		successfulRequest(res);
-	    });
-	});
-    }
-
-} // removeDocs
-
-// Create a function to delete a single search or publication
-//   funcname is used to create a console log message of 'In ' + funcname
-//     on entry to the function
-//   idname is the name of the key used to identify the item to delete
-//     in the JSON payload
-//   delItems is the routine we call to delete multiple elements
-//
-function deleteItem(funcname, idname, delItems) {
-    return function (jsonpayload, req, res, next) {
-	console.log(">> In " + funcname);
-	// console.log(">>   cookies = ", req.cookies);
-	// console.log(">>   payload = ", jsonpayload);
-
-	ifLoggedIn(req, res, function (loginid) {
-	    var jsonobj = JSON.parse(jsonpayload);
-	    var delid = jsonobj[idname];
-	    console.log("logincookie:", loginid, " delete item:", delid);
-	    
-	    if (delid === undefined) {
-		failedRequest(res);
-	    } else {
-		delItems(res, loginid, [delid]);
-	    }
-	});
-    };
-
-} // deleteItem
-
-// Create a function to delete multiple search or publication items
-//   funcname is used to create a console log message of 'In ' + funcname
-//     on entry to the function
-//   idname is the name of the key used to identify the items to delete
-//     in the JSON payload
-//   delItems is the routine we call to delete multiple elements
-//
-function deleteItems(funcname, idname, delItems) {
-    return function (payload, req, res, next) {
-	console.log(">> In " + funcname);
-	//console.log(">>   cookies = ", req.cookies);
-	//console.log(">>   payload = ", payload);
-
-	ifLoggedIn(req, res, function (loginid) {
-	    var terms = JSON.parse(payload);
-	    var action = terms.action;
-	    var delids = [];
-	    if (isArray(terms[idname])) {
-		delids = terms[idname];
-	    } else {
-		delids = [ terms[idname] ];
-	    }
-    
-	    if (action === "delete" && delids.length > 0) {
-		delItems(res, loginid, delids);
-	    } else {
-		failedRequest(res);
-	    }
-	});
-    };
-
-} // deleteItems
-
-var deleteSearch   = deleteItem("deleteSearch", "searchid", removeSearches);
-var deletePub      = deleteItem("deletePub",    "pubid",    removeDocs);
-
-var deleteSearches = deleteItems("deleteSearches", "searchid", removeSearches);
-var deletePubs     = deleteItems("deletePubs",     "pubid",    removeDocs);
-
-
 function addToRedis(req, res, next) {
      console.log("::::::::::addToRedisCookies", req.cookies);
      postHandler(req, res, insertUser);
@@ -342,23 +82,23 @@ function addToRedis(req, res, next) {
 }
 
 function saveSearchToRedis(req, res, next) {
-    postHandler(req, res, saveSearch);
+    postHandler(req, res, saved.saveSearch);
 }
 function savePubToRedis(req, res, next) {
-    postHandler(req, res, savePub);
+    postHandler(req, res, saved.savePub);
 }
 
 function deletePubFromRedis(req, res, next) {
-    postHandler(req, res, deletePub);
+    postHandler(req, res, saved.deletePub);
 }
 function deletePubsFromRedis(req, res, next) {
-    postHandler(req, res, deletePubs);
+    postHandler(req, res, saved.deletePubs);
 }
 function deleteSearchFromRedis(req, res, next) {
-    postHandler(req, res, deleteSearch);
+    postHandler(req, res, saved.deleteSearch);
 }
 function deleteSearchesFromRedis(req, res, next) {
-    postHandler(req, res, deleteSearches);
+    postHandler(req, res, saved.deleteSearches);
 }
 
 // Proxy the call to ADS, setting up the NASA_ADS_ID cookie
@@ -434,7 +174,7 @@ server.use(SITEPREFIX+'/getuser', getUser);
 server.use(SITEPREFIX+'/logout', logoutUser);
 server.use(SITEPREFIX+'/login', loginUser);
 server.use(SITEPREFIX+'/savesearch', saveSearchToRedis);
-server.use(SITEPREFIX+'/savedsearches', getSavedSearches);
+server.use(SITEPREFIX+'/savedsearches', saved.getSavedSearches);
 server.use(SITEPREFIX+'/savepub', savePubToRedis);
 
 server.use(SITEPREFIX+'/deletesearch', deleteSearchFromRedis);
@@ -448,7 +188,7 @@ server.use(SITEPREFIX+'/deletepubs', deletePubsFromRedis);
 //
 server.use(SITEPREFIX+'/adsproxy', doADSProxy);
 
-server.use(SITEPREFIX+'/savedpubs', getSavedPubs);
+server.use(SITEPREFIX+'/savedpubs', saved.getSavedPubs);
 
 // not sure of the best way to do this, but want to privide access to
 // ajax-loader.gif and this way avoids hacking ResultWidget.2.0.js
