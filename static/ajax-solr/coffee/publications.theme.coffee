@@ -2,10 +2,6 @@
 
 $ = jQuery
 
-# TODO: think about sending Manager around explicitly
-root = exports ? this
-Manager = root.Manager
-
 fancyboxOpts =
   autoDimensions: false
   width: 1024
@@ -87,17 +83,16 @@ getObslink = (mission, obsid) ->
 
 pubLabel = (label) -> $('<span class="pubitem"/>').text(label)
 
-makePivotHandler = (pivot) ->
+makePivotHandler = (mgr, pivot) ->
   () ->
-    # using global Manager here
-    Manager.store.remove 'fq'
-    Manager.store.addByValue 'fq', pivot
-    Manager.doRequest 0
+    mgr.store.remove 'fq'
+    mgr.store.addByValue 'fq', pivot
+    mgr.doRequest 0
     return false
 
-makePivotLink = (pivot) -> AjaxSolr.theme('pivot_link', makePivotHandler pivot)
+makePivotLink = (mgr, pivot) -> AjaxSolr.theme('pivot_link', makePivotHandler mgr, pivot)
 
-addObjectArea = (parentarea, docid, objnames, objtypes) ->
+addObjectArea = (mgr, parentarea, docid, objnames, objtypes) ->
   if not objnames?
     return
 
@@ -117,10 +112,10 @@ addObjectArea = (parentarea, docid, objnames, objtypes) ->
     $obody.append($('<tr/>')
       .append($('<td/>')
         .append(makeSimbadLink name)
-        .append(makePivotLink "objectnames_s:#{AjaxSolr.Parameter.escapeValue name}"))
+        .append(makePivotLink mgr, "objectnames_s:#{AjaxSolr.Parameter.escapeValue name}"))
       .append($('<td/>')
         .text(objtype)
-        .append(makePivotLink "objecttypes_s:#{AjaxSolr.Parameter.escapeValue objtype}"))
+        .append(makePivotLink mgr, "objecttypes_s:#{AjaxSolr.Parameter.escapeValue objtype}"))
         )
 
   $otable.append $obody
@@ -151,7 +146,7 @@ compareObs = (a, b) ->
 # we encode target names as 'MAST/foo' and 'CHANDRA/bar' and so we could
 # use 'MAST' to possibly simplify some logic below
 #
-addDataArea = (parentarea, docid, bibcode, obsids, exptimes, expdates, targets, ras, decs) ->
+addDataArea = (mgr, parentarea, docid, bibcode, obsids, exptimes, expdates, targets, ras, decs) ->
   if not obsids?
     return
 
@@ -247,12 +242,12 @@ addDataArea = (parentarea, docid, bibcode, obsids, exptimes, expdates, targets, 
         .append($('<td/>').text mission.toUpperCase())
         .append($('<td/>')
           .append(getObslink mission, obsid)
-          .append(makePivotLink obsidpivot))
+          .append(makePivotLink mgr, obsidpivot))
         .append($('<td/>').text exptime)
         .append($('<td/>').text obsdate)
         .append($('<td/>')
           .text(target)
-          .append(makePivotLink('targets_s:' + AjaxSolr.Parameter.escapeValue(parent + '/' + mvalues[idx].target))))
+          .append(makePivotLink(mgr, 'targets_s:' + AjaxSolr.Parameter.escapeValue(parent + '/' + mvalues[idx].target))))
         .append($('<td/>').text ra) # may want to try <span value=decimal>text value</span> trick?
         .append($('<td/>').text dec))
 
@@ -290,9 +285,11 @@ AjaxSolr.theme.prototype.snippet = (doc, authors, year) ->
     .append(" #{doc.citationcount_i}")
 
   $output2 = $('<div/>')
-  addObjectArea $output2, doc.id, doc.objectnames_s, doc.objecttypes_s
-  addDataArea $output2, doc.id, doc.bibcode,
-    doc.obsids_s, doc.exptime_f, doc.obsvtime_d, doc.targets_s, doc.ra_f, doc.dec_f
+  mgr = getManager()
+  addObjectArea mgr, $output2, doc.id, doc.objectnames_s, doc.objecttypes_s
+  addDataArea mgr, $output2, doc.id, doc.bibcode,
+    doc.obsids_s, doc.exptime_f, doc.obsvtime_d, doc.targets_s,
+    doc.ra_f, doc.dec_f
 
   # do we need to HTML escape this text?
   $abstract = $('<div class="abstracttext"><span class="pubitem">Abstract:</span> '+doc.abstract+'</div>')

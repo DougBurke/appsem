@@ -8,12 +8,10 @@ $ = jQuery
 
 root = exports ? this
 
-# should the following be wrapped by
-# $ ->
-# ?
-
 root.Manager = new AjaxSolr.Manager(solrUrl: SOLRURL)
 Manager = root.Manager
+
+root.getManager = () -> Manager
 
 Manager.addWidget(new AjaxSolr.ResultWidget
   id: 'result'
