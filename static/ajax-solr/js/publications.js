@@ -1,5 +1,7 @@
 /*
  * Code for the publications page
+ *
+ * THIS IS OLD CODE; MAKE CHANGES TO ../coffee/publications.coffee
  */
 
 var Manager;

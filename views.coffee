@@ -57,7 +57,7 @@ doPublications = doView "Publications", bodybodypub,
     haswidgets: true
     siteprefix: SITEPREFIX
     staticprefix: STATICPREFIX
-    jsdir: 'js'
+    jsdir: 'coffee'
 
   bodyhead:
     isitchosenpublications: 'chosen'

@@ -1,5 +1,7 @@
 /*
  * Theme for publications page
+ *
+ * THIS IS OLD CODE; MAKE CHANGES TO ../coffee/publications.theme.coffee
  */
 (function ($) {
 
