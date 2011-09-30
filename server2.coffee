@@ -59,7 +59,7 @@ makeADSJSONPCall = (req, res, next) ->
     "#{jsonpcback}(#{val})"
 
 addToRedis = (req, res, next) ->
-  console.log "::addToRedis cookies=#{req.cookies}"
+  console.log "::addToRedis cookies=#{JSON.stringify req.cookies}"
   postHandler req, res, user.insertUser
 
 # Should probably just make anonymous functions
@@ -98,7 +98,7 @@ deleteSearchesFromRedis = doPost saved.deleteSearches
 
 doADSProxyHandler = (payload, req, res, next) ->
   console.log '>> In doADSProxyHandler'
-  console.log ">>    cookies=#{req.cookies}"
+  console.log ">>    cookies=#{JSON.stringify req.cookies}"
   console.log ">>    payload=#{payload}"
 
   ifLoggedIn req, res, (loginid) ->
@@ -178,8 +178,8 @@ server.use '/images', connect.static(__dirname + '/static/ajax-solr/images/')
 
 runServer = (svr, port) ->
   now = new Date()
-  url = "http://localhost:#{port}#{SITEPREFIX}/explorer/publications/"
-  console.log "#{now.toUTCString()} - Starting server on #{url}"
+  hosturl = "http://localhost:#{port}#{SITEPREFIX}/explorer/publications/"
+  console.log "#{now.toUTCString()} - Starting server on #{hosturl}"
   svr.listen port
 
 migration.validateRedis redis_client, () -> runServer server, 3002
