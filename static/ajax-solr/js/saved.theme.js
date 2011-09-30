@@ -1,5 +1,7 @@
 /*
  * Theme for saved page
+ *
+ * THIS IS OLD CODE; MAKE CHANGES TO ../coffee/saved.theme.coffee
  */
 
 (function ($) {

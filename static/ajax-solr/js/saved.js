@@ -1,5 +1,7 @@
 /*
  * Code for the saved page
+ *
+ * THIS IS OLD CODE; MAKE CHANGES TO ../coffee/saved.coffee
  */
 
 // var fancyboxOpts = { 'autoDimensions': false, 'width': 1024, 'height': 768 };

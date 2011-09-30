@@ -57,6 +57,7 @@ doPublications = doView "Publications", bodybodypub,
     haswidgets: true
     siteprefix: SITEPREFIX
     staticprefix: STATICPREFIX
+    jsdir: 'js'
 
   bodyhead:
     isitchosenpublications: 'chosen'
@@ -75,6 +76,7 @@ doObservations = doView "Observations", bodybodyobsv,
     haswidgets: true
     siteprefix: SITEPREFIX
     staticprefix: STATICPREFIX
+    jsdir: 'js'
 
   bodyhead:
     isitchosenobservations: 'chosen'
@@ -93,6 +95,7 @@ doSaved = doView "Saved", bodybodysaved,
     haswidgets: false
     siteprefix: SITEPREFIX
     staticprefix: STATICPREFIX
+    jsdir: 'coffee'
 
   bodyhead:
     isitchosensaved: 'chosen'

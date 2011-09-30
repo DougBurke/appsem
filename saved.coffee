@@ -300,6 +300,7 @@ removeDocs = (res, loginid, docids) ->
     return
 
   redis_client.get "email:#{loginid}", (err, email) ->
+    console.log ">> removeDocs docids=#{docids}"
     pubkey = "savedpub:#{email}"
     titlekey = "savedtitles:#{email}"
     bibkey = "savedbibcodes:#{email}"
@@ -353,17 +354,19 @@ isArray = `function (o) {
 #   delItems is the routine we call to delete multiple elements
 
 deleteItems = (funcname, idname, delItems) ->
-    return (payload, req, res, next) ->
-      console.log ">> In #{funcname}"
-      ifLoggedIn req, res, (loginid) ->
-        terms = JSON.parse payload
-        action = terms.action
-        delids = if isArray terms[idname] then terms[idname] else [terms[idname]]
+  return (payload, req, res, next) ->
+    console.log ">> In #{funcname}"
+    ifLoggedIn req, res, (loginid) ->
+      terms = JSON.parse payload
+      console.log ">> JSON payload=#{payload}"
 
-        if action is "delete" and delids.length > 0
-          delItems res, loginid, delids
-        else
-          failedRequest res
+      action = terms.action
+      delids = if isArray terms[idname] then terms[idname] else [terms[idname]]
+
+      if action is "delete" and delids.length > 0
+        delItems res, loginid, delids
+      else
+        failedRequest res
 
 exports.deleteSearch   = deleteItem "deleteSearch", "searchid", removeSearches
 exports.deletePub      = deleteItem "deletePub",    "pubid",    removeDocs
