@@ -1,3 +1,6 @@
+/*
+ * THIS IS OLD CODE; MAKE CHANGES TO AutocompleteWidget2.coffee
+ */
 (function ($) {
 
     AjaxSolr.AutocompleteWidget = AjaxSolr.AbstractFacetWidget.extend({
