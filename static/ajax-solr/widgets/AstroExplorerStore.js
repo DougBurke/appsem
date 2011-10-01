@@ -8,6 +8,8 @@
  *   b - work around an issue whereby using a facet constraint which has
  *       a comma in it - e.g. an Author name - will cause problems when
  *       the page is reloaded.
+ *
+ * THIS IS OLD CODE; MAKE CHANGES TO AstroExplorerStore.coffee
  */
 
 (function ($) {
