@@ -23,12 +23,12 @@ AjaxSolr.AstroExplorerStore = AjaxSolr.ParameterHashStore.extend
 	# This may be a sledgehammer aimed at the wrong nut.
 
   parseString: (str) ->
-    pairs = str.split '&'
     for pair in str.split '&'
-      param = new AjaxSolr.Parameter()
-      param.parseString pair
-      if AjaxSolr.isArray param.value
-        param.value = param.value.join ','
-      this.add param.name, param
+      if pair
+        param = new AjaxSolr.Parameter()
+        param.parseString pair
+        if AjaxSolr.isArray param.value
+          param.value = param.value.join ','
+        this.add param.name, param
 
     return true
