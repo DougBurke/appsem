@@ -1,5 +1,7 @@
 /*
  * Common code for AstroExplorer
+ *
+ * THIS IS OLD CODE; MAKE CHANGES TO ../coffee/semflow.core.coffee
  */
 
 var SITEPREFIX = '/semantic2/alpha';

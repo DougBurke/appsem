@@ -28,14 +28,14 @@ loginUser = (req, res, next) ->
 
   # inline the responsedo closure that was in the original JavaScript
   res.writeHead 302, 'Redirect',
-    'Set-Cookie': startupcookie.cookie
+    'Set-Cookie': startupCookie.cookie
     Location: redirect
 
   res.statusCode = 302
   res.end()
 
 logoutUser = (req, res, next) ->
-  console.log "::: logoutCookies #{req.cookies}"
+  console.log "::: logoutCookies #{JSON.stringify req.cookies}"
   loginCookie = req.cookies.logincookie
   newLoginCookie = makeLoginCookie 'logincookie', loginCookie, -1
   redirect = url.parse(req.url, true).query.redirect
@@ -51,8 +51,27 @@ insertUser = (jsonpayload, req, res, next) ->
   loginCookie = makeLoginCookie 'logincookie', currentToken, 365
   cookie = loginCookie.cookie
 
-  console.log "insertUser [[#{jsonpayload}]]"
+  # Seeing some errors here in CoffeeScript conversion that take
+  # down the server, so add some defensive code.
+  #
+  console.log "insertUser payload=#{jsonpayload}"
+  if "#{jsonpayload}" is "undefined" or not jsonpayload? or jsonpayload is ""
+    console.log "@@ payload is undefined or empty!"
+    res.writeHead 200, "OK",
+      'Content-Type': 'application/json'
+      'Set-Cookie': cookie
+    res.end()
+    return
+
   jsonObj = JSON.parse jsonpayload
+  if not jsonObj.email?
+    console.log "@@ payload has no email field!"
+    res.writeHead 200, "OK",
+      'Content-Type': 'application/json'
+      'Set-Cookie': cookie
+    res.end()
+    return
+
   email = jsonObj.email
 
   mkeys = [['hset', email, 'dajson', jsonpayload]
@@ -86,7 +105,9 @@ insertUser = (jsonpayload, req, res, next) ->
 getUser = (req, res, next) ->
   loginCookie = req.cookies.logincookie
   startupCookie = req.cookies.startupcookie
-  sendback = startup: if startupCookie? then startupCookie else 'undefined'
+  sendback =
+    startup: if startupCookie? then startupCookie else 'undefined'
+    email: 'undefined'
 
   if not loginCookie?
     headerDict = 'Content-Type': 'application/json'
@@ -94,18 +115,17 @@ getUser = (req, res, next) ->
       headerDict['Set-Cookie'] = makeLoginCookie('startupcookie', startupCookie, -1).cookie
 
     res.writeHead 200, 'OK', headerDict
-    sendback.email = 'undefined'
     stashMail = JSON.stringify sendback
     console.log "getUser: no loginCookie, returning #{stashMail}"
     res.end stashMail
     return
 
-  res.writeHead 200, 'OK',
-    'Content-Type': 'application/json'
+  res.writeHead 200, 'OK', 'Content-Type': 'application/json'
   console.log "getUser: loginCookie=#{loginCookie}"
   redis_client.get "email:#{loginCookie}", (err, reply) ->
     if (err)
       # no user
+      console.log "@@ getUser get email:#{loginCookie} failed with #{err}"
       next err
     else
       sendback.email = String reply
