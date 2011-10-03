@@ -1,5 +1,7 @@
 /**
  * Widgets for the publications view.
+ *
+ * THIS IS OLD CODE; MAKE CHANGES TO publications.ResultWidget.coffee
  */
 
 (function ($) {

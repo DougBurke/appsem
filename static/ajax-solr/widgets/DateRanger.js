@@ -4,6 +4,8 @@
 
 //we have a one day offset problem may be due to inclusive range ussues FIX
 
+// THIS IS OLD CODE; MAKE CHANGES TO DateRanger.coffee
+
 (function ($) {
 
     // Note: using date.js

@@ -17,6 +17,8 @@
 //      The code assumes that there is only one filter in the search
 //      for this field.
 //
+// THIS IS OLD CODE; MAKE CHANGES TO DualSlider.coffee
+//
 
 (function ($) {
 

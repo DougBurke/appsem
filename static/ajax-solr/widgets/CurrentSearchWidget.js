@@ -12,6 +12,8 @@
 //       we have
 //         (x) Keywords: astronomy uv [P]
 //
+// THIS IS OLD CODE; MAKE CHANGES TO CurrentSearch.coffee
+//
 
 (function ($) {
 

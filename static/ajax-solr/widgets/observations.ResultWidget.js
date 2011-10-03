@@ -1,5 +1,7 @@
 /**
  * Widgets for the observations view.
+ *
+ * THIS IS OLD CODE; MAKE CHANGES TO observations.ResultWidget.coffee
  */
 
 function encodeObsuri(obsuri){

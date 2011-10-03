@@ -1,3 +1,5 @@
+// THIS IS OLD CODE; MAKE CHANGES TO TagcloudWidget.coffee
+
 (function ($) {
 
     AjaxSolr.TagcloudWidget = AjaxSolr.AbstractFacetWidget.extend({
